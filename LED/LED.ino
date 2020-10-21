@@ -8,7 +8,7 @@
 #endif
 
 #define PIN        14 // On Trinket or Gemma, suggest changing this to 1
-#define NUMPIXELS 80 
+#define NUMPIXELS 80
 
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_RGB + NEO_KHZ800);
 #define DELAYVAL 0 // Time (in milliseconds) to pause between pixels
@@ -65,7 +65,7 @@ void setup()
 
 void getData(String req)
 {
-
+  Serial.println("getData()");
   //JSON----------------------------------------
   const size_t capacity = JSON_OBJECT_SIZE(3) + JSON_ARRAY_SIZE(2) + 160;
 
@@ -74,7 +74,7 @@ void getData(String req)
   // Parse JSON object
   JsonObject& json_object = jsonBuffer.parseObject(req);
   if (!json_object.success()) {
-    
+
     Serial.println("No data or parseObject() failed");
   }
   else
@@ -86,11 +86,12 @@ void light_leds(JsonObject &jObj)
 {
 
   int num = jObj["num"];
-
+  int delayNum = jObj["del"];
+  Serial.println(delayNum);
   int redTab[num];
   int greenTab[num];
   int blueTab[num];
-  int red , green , blue, brightness=-1;
+  int red , green , blue, brightness = -1;
 
   if (num == 1)
   {
@@ -103,26 +104,24 @@ void light_leds(JsonObject &jObj)
   {
     for (int i = 0; i < num; i++)
     {
-      String numR= "r"+String(i);
-      String numG= "g"+String(i);
-      String numB= "b"+String(i);
 
-      redTab[i] = jObj[numR];
-      greenTab[i] = jObj[numG];
-      blueTab[i] = jObj[numB];
+      //      Serial.println("L"+String(i));
+      redTab[i] = jObj["L" + String(i)]["red"];
+      greenTab[i] = jObj["L" + String(i)]["green"];
+      blueTab[i] = jObj["L" + String(i)]["blue"];
 
     }
-    
+
   }
-  
+
   //czysci zapisane ustawienia
   pixels.clear();
   int looplim;
 
-  if(num==1)
-    looplim=NUMPIXELS;
+  if (num == 1)
+    looplim = NUMPIXELS;
   else
-    looplim=num;
+    looplim = num;
   // dla kazdego ,,pixela''
   for (int i = 0; i < looplim; i++)
   {
@@ -134,10 +133,17 @@ void light_leds(JsonObject &jObj)
     if (brightness > 0) //ustawia jasnosc
       pixels.setBrightness(brightness);
 
-    //delay(DELAYVAL); // Pause before next pass through loop
+    if (delayNum > 0)
+    { delay(delayNum);
+      pixels.show();
+    }
   }
   pixels.show();
+
 }
+unsigned long aktualnyCzas = 0;
+unsigned long zapamietanyCzas = 0;
+unsigned long roznicaCzasu = 0;
 
 void loop()
 {
@@ -147,7 +153,9 @@ void loop()
 
   // zmienna dla otrzymywanych danych
   static String req;
-  Serial.println(req);
+
+  //Serial.println(req);
+  bool ok = true;
   //=========== OBSŁUGA POŁĄCZENIA ===================
   if (client)
   {
@@ -155,27 +163,51 @@ void loop()
     {
       Serial.println("Client Connected");
       client.println("Hello, client!");
+      zapamietanyCzas = millis();
     }
 
     while (client.connected())
     {
       // Wait until the client sends some data
       Serial.println("new client");
-
-      int er_num=0;
+      ok = true;
+      int er_num = 0;
       while (!client.available()) {
-        delay(0.5);
+        delay(100);
+        aktualnyCzas = millis();
+        Serial.print(roznicaCzasu);
+        Serial.print("   ");
+
+        roznicaCzasu = aktualnyCzas - zapamietanyCzas;
+
+        //Jeśli różnica wynosi ponad sekundę
+        if (roznicaCzasu >= 3000UL) {
+          client.flush();
+          client.stop();
+          zapamietanyCzas = millis();
+          ok = false;
+          break;
+        }
+
+        Serial.println(aktualnyCzas);
       }
+
+
       req = client.readStringUntil('\r');
+
+      // przekazanie stringa z otrzymanymi danymi do funkcji
+      getData(req);
+
 
 
       client.flush();
     }
     client.stop();
     Serial.println("Client disconnected");
+
   }
   //----------------------------------------
-
-  // przekazanie stringa z otrzymanymi danymi do funkcji
   getData(req);
+
+
 }

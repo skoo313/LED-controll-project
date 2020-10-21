@@ -6,6 +6,7 @@ from tkinter import *
 from tkmacosx import Button, ColorVar, Marquee, Colorscale
 import socket
 import sys
+import time
 import json
 from colorsys import rgb_to_hls, hls_to_rgb
 from colour import Color
@@ -239,12 +240,15 @@ class ColorMain(tk.Frame):
         try:
            # Connect to server and send data
            sock.connect((HOST, PORT))
+
+        #    a=input()
+           time.sleep(.5)
            sock.sendall(bytes(finalData,encoding="utf-8"))
-           
+ 
            # Receive data from the server and shut down
            received = sock.recv(1024)
            received = received.decode("utf-8")
-           
+
         finally:
            sock.close()
 
@@ -258,10 +262,10 @@ class OneColorPage(ColorMain):
         self.columnconfigure(0, weight = 1)
         self.columnconfigure(1, weight = 1)
 
-        self.rowconfigure(0, weight = 1)
-        self.rowconfigure(1, weight = 2)
-        # self.rowconfigure(2, weight = 1)
-        self.rowconfigure(3, weight = 3)
+        self.rowconfigure(0, weight = 2)
+        self.rowconfigure(1, weight = 4)
+        self.rowconfigure(2, weight = 1)
+        self.rowconfigure(3, weight = 6)
         
         # self.rowconfigure(4, weight = 4)
         # self.rowconfigure(5, weight = 4)
@@ -298,11 +302,20 @@ class OneColorPage(ColorMain):
         # obszar z podglądem wybranego koloru
         Label(self, text="\n\n\n\n",bg=self.colorTmp, fg=fgvar).grid(row=1, column=0, columnspan=2,sticky="nesw", pady=50,padx=50)
 
+        xFrame = Frame(self, bg=def_color)
+        xFrame.grid(column=0, columnspan=2, row=2, sticky = "nsew")
+        xFrame.columnconfigure(0, weight = 3)
+        xFrame.columnconfigure(1, weight = 3)
+        xFrame.columnconfigure(2, weight = 1)
+        
+
         var1 = IntVar(value=1)
         var2 = IntVar(value=0)
-        tk.Checkbutton(self, command=lambda: self.switchVar('basic', var1,var2),   activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="Basic color chooser", variable=var1).grid(row=2, column=0, sticky="news",padx=10,pady=10)    
-        tk.Checkbutton(self, command=lambda: self.switchVar('rgb',var1,var2),      activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="RGB color chooser",   variable=var2).grid(row=2, column=1, sticky="news",padx=10,pady=10)
-        
+        tk.Checkbutton(xFrame, command=lambda: self.switchVar('basic', var1,var2),   activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="Basic color chooser", variable=var1).grid(row=0, column=0, sticky="news",padx=10,pady=10)    
+        tk.Checkbutton(xFrame, command=lambda: self.switchVar('rgb',var1,var2),  activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="RGB color chooser", variable=var2).grid(row=0, column=1, sticky="news",padx=10,pady=10)
+
+        self.delayNum =Spinbox(xFrame, foreground ='red', background="#353535",font=('Arial', 15), from_=0, to=3,format="%.2f",text="S",increment=0.01 ,justify=CENTER,width=30)
+        self.delayNum .grid(row=0,column=2, sticky="nwes",padx=10,pady=10)
         
         # self.grid_columnconfigure(2, weight=24) # as did this
 
@@ -322,6 +335,7 @@ class OneColorPage(ColorMain):
         m={}
         
         m["num"]=1
+        m["del"]=str((float(self.delayNum.get())*1000))
         m["r"]=int(colour[0])
         m["g"]=int(colour[1])
         m["b"]=int(colour[2])
@@ -342,12 +356,11 @@ class GradientColorPage(ColorMain):
         self.columnconfigure(0, weight = 1)
         self.columnconfigure(1, weight = 1)
 
-        self.rowconfigure(0, weight = 1)
-        self.rowconfigure(1, weight = 2)
-        self.rowconfigure(4, weight = 3)
-        # self.rowconfigure(4, weight = 4)
-        # self.rowconfigure(5, weight = 4)
-
+        self.rowconfigure(0, weight = 5)
+        self.rowconfigure(1, weight = 1)
+        self.rowconfigure(2, weight = 1)
+        self.rowconfigure(3, weight = 1)
+        self.rowconfigure(4, weight = 11)
         self.main_controllFrame = Frame(self, bg=def_color)
         self.main_controllFrame.grid(column=0, columnspan=2, row=0, sticky = "nsew")
         # ustawia odpowiednie szerokosci i wysokości kolumn i rzędów w układzie elementów
@@ -355,7 +368,7 @@ class GradientColorPage(ColorMain):
         self.main_controllFrame.columnconfigure(1, weight = 1)
         self.main_controllFrame.rowconfigure(0, weight = 2)
         
-        # przyciski nawigujące
+        #R1 przyciski nawigujące
         button1 = ttk.Button(self.main_controllFrame,style = 'TButton' ,text = "Apply", command = lambda: self.apply_gradient(self.colorFrom.get(),self.colorTo.get()))
         button1.grid(row = 0,column=0, sticky = 'nswe', padx=10, pady=10)
 
@@ -376,12 +389,6 @@ class GradientColorPage(ColorMain):
         fgvar = ColorVar(value='white')
 
         
-
-
-        # obszar z podglądem wybranego koloru
-        # Label(self, text="\n\n\n\n",bg=self.colorTmp, fg=fgvar).grid(row=2, column=0, columnspan=2,sticky="nesw", pady=50,padx=50)
-        GradientFrame(self,self.colorFrom, self.colorTo, borderwidth=1, relief="sunken").grid(row=2, column=0, columnspan=2,sticky="nesw", pady=50,padx=50)
-
         col1 = IntVar(value=1)
         col2 = IntVar(value=0)
         
@@ -389,10 +396,24 @@ class GradientColorPage(ColorMain):
         tk.Checkbutton(self, command=lambda: self.switchVar('color_to',col1,col2),  activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="End color", variable=col2).grid(row=1, column=1, sticky="news",padx=10,pady=10)
         
 
+        # obszar z podglądem wybranego koloru
+        # Label(self, text="\n\n\n\n",bg=self.colorTmp, fg=fgvar).grid(row=2, column=0, columnspan=2,sticky="nesw", pady=50,padx=50)
+        GradientFrame(self,self.colorFrom, self.colorTo).grid(row=2, column=0, columnspan=2,sticky="nesw")
+
+        xFrame = Frame(self, bg=def_color)
+        xFrame.grid(column=0, columnspan=2, row=3, sticky = "nsew")
+        xFrame.columnconfigure(0, weight = 3)
+        xFrame.columnconfigure(1, weight = 3)
+        xFrame.columnconfigure(2, weight = 1)
+        
+
         var1 = IntVar(value=1)
         var2 = IntVar(value=0)
-        tk.Checkbutton(self, command=lambda: self.switchVar('basic', var1,var2),   activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="Basic color chooser", variable=var1).grid(row=3, column=0, sticky="news",padx=10,pady=10)    
-        tk.Checkbutton(self, command=lambda: self.switchVar('rgb',var1,var2),  activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="RGB color chooser", variable=var2).grid(row=3, column=1, sticky="news",padx=10,pady=10)
+        tk.Checkbutton(xFrame, command=lambda: self.switchVar('basic', var1,var2),   activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="Basic color chooser", variable=var1).grid(row=0, column=0, sticky="news",padx=10,pady=10)    
+        tk.Checkbutton(xFrame, command=lambda: self.switchVar('rgb',var1,var2),  activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="RGB color chooser", variable=var2).grid(row=0, column=1, sticky="news",padx=10,pady=10)
+
+        self.delayNum =Spinbox(xFrame, foreground ='red', background="#353535",font=('Arial', 15), from_=0, to=1,format="%.2f",text="S",increment=0.01 ,justify=CENTER,width=30,command=self.print_item_values)
+        self.delayNum .grid(row=0,column=2, sticky="nwes",padx=10,pady=10)
         
         # self.grid_rowconfigure(3, weight=4) # this needed to be added
         # self.grid_columnconfigure(2, weight=24) # as did this
@@ -403,6 +424,8 @@ class GradientColorPage(ColorMain):
         self.colorTmp.trace_add('write', lambda name, index, mode, c1=col1,c2=col2: self.my_callback(c1,c2)) 
     
         self.load_color_opt("basic")     
+    def print_item_values(self):
+        print(self.delayNum.get())
 
     def my_callback(self,col1,col2): 
         """ Funkcja ustawiająca kolor koloru od/do """
@@ -418,12 +441,13 @@ class GradientColorPage(ColorMain):
     def apply_gradient(self,colorFrom,colorTo):
         """ Funkcja obliczająca kolory wchodzące w skład gradientu i przekazujące je dalej do wysłania. """
 
-        colors = list(Color(colorFrom).range_to(Color(colorTo),65))
+        colors = list(Color(colorFrom).range_to(Color(colorTo),80))
         
         print("LEN: ", len(colors))
         
-        m={}
-        m["num"]=65
+        LED={}
+        LED["num"]=80
+        LED["del"]=str((float(self.delayNum.get())*1000))
 
         for i in range(len(colors)):
             c=colors[i]
@@ -434,12 +458,33 @@ class GradientColorPage(ColorMain):
                 c="#000000"
                 
             col=hex_rgb(str(c))
-            
-            m["r" + str(i)]=col[0]
-            m["g"+ str(i)]=col[1]
-            m["b"+ str(i)]=col[2]
+            m={}
+            m["red"]=str(col[0])
+            m["green"]=str(col[1])
+            m["blue"]=str(col[2])
+
+            LED["L"+str(i)]=m
+
         
-        self.send(m)
+        print(LED)
+        self.send(LED)
+        # finalData = json.dumps(LED)
+
+        # # Create a socket (SOCK_STREAM means a TCP socket)
+        # sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # try:
+        #    # Connect to server and send data
+        #    sock.connect((HOST, PORT))
+
+        #    a=input()
+        #    sock.sendall(bytes(finalData,encoding="utf-8"))
+
+        #    # Receive data from the server and shut down
+        #    received = sock.recv(1024)
+        #    received = received.decode("utf-8")
+
+        # finally:
+        #    sock.close()
         print("Done")
 
 class GradientFrame(tk.Canvas):
