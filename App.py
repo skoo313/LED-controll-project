@@ -10,7 +10,8 @@ import time
 import json
 from colorsys import rgb_to_hls, hls_to_rgb
 from colour import Color
-
+from tkinter import *
+from tkscrolledframe import ScrolledFrame
 # definiuję adres:port modułu wifi z którym bede sie łączył
 HOST, PORT = "192.168.0.241", 8888 #241   157
 
@@ -51,7 +52,7 @@ class Main():
         self.frames = {}
 
         # tworzy i ustawia wartości początkowe dla istniejących klas (podstron)
-        for fr in (MainPage,OneColorPage, GradientColorPage):
+        for fr in (MainPage,OneColorPage, GradientColorPage, TPM):
             frame = fr(main_container, self)
             self.frames[fr] = frame
             frame.grid(row = 0, column = 0, sticky = "nsew")
@@ -88,7 +89,7 @@ class MainPage(tk.Frame):
         button2 = ttk.Button(self, text = "Gradient color",command = lambda: controller.show_frame(GradientColorPage))
         button2.grid(row = 1, column=1,sticky = 'nswe', pady=10)
 
-        button3 = ttk.Button(self, text = "OPT_3")
+        button3 = ttk.Button(self, text = "TPM",command = lambda: controller.show_frame(TPM))
         button3.grid(row = 2,column=0, sticky = 'nswe', padx=10)
         
         button4 = ttk.Button(self, text = "OPT_4")
@@ -232,26 +233,26 @@ class ColorMain(tk.Frame):
         r, g, b = hls_to_rgb(h, l, s)
         return int(r * 255), int(g * 255), int(b * 255)
     
+
     def send(self,data):
         finalData = json.dumps(data)
 
         # Create a socket (SOCK_STREAM means a TCP socket)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
         try:
-           # Connect to server and send data
-           sock.connect((HOST, PORT))
+            # Connect to server and send data
+            sock.connect((HOST, PORT))
+            
+            time.sleep(.5)
+            sock.sendall(bytes(finalData,encoding="utf-8"))
+            # Receive data from the server and shut down
 
-        #    a=input()
-           time.sleep(.5)
-           sock.sendall(bytes(finalData,encoding="utf-8"))
- 
-           # Receive data from the server and shut down
-           received = sock.recv(1024)
-           received = received.decode("utf-8")
-
+            
+            # print("Received message: " + received)
         finally:
            sock.close()
-
+    
 class OneColorPage(ColorMain):
     """ Klasa z widokiem umożliwiającym ustawienia jednolicie świecących ledów """
     def __init__(self, parent, controller):
@@ -324,6 +325,7 @@ class OneColorPage(ColorMain):
         self.load_color_opt("basic")      
 
     def apply(self,X,Y):
+        
         """ Funkcja konwertująca kolor i jasność do json'a i wysyłająca go na zadany adres """
         # wartość koloru w formacie hex przelicza na rgb
         colour = hex_rgb(X)
@@ -333,18 +335,21 @@ class OneColorPage(ColorMain):
         # brightness= tuple(int(b[i:i+2], 16) for i in (0, 2, 4))
         brightness = hex_rgb(self.brightness.get())
         m={}
+        LED={}
+        LED["num"]=80
+        LED["del"]=str((float(self.delayNum.get())*1000))
+        LED["brightness"]=int(brightness[0])
+
+        for i in range(80):
+            m["red"]=int(colour[0])
+            m["green"]=int(colour[1])
+            m["blue"]=int(colour[2])
+
+            LED["L"+str(i)]=m
+        print(LED)
+        print("App message: sending...")
+        self.send(LED)
         
-        m["num"]=1
-        m["del"]=str((float(self.delayNum.get())*1000))
-        m["r"]=int(colour[0])
-        m["g"]=int(colour[1])
-        m["b"]=int(colour[2])
-        m["brightness"]=int(brightness[0])
-       
-        print(m)
-        
-        self.send(m)
-        print("Done")
 
 class GradientColorPage(ColorMain):
     """ Klasa z widokiem umożliwiającym ustawienia gradientu ledów """
@@ -468,24 +473,80 @@ class GradientColorPage(ColorMain):
         
         print(LED)
         self.send(LED)
-        # finalData = json.dumps(LED)
 
-        # # Create a socket (SOCK_STREAM means a TCP socket)
-        # sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # try:
-        #    # Connect to server and send data
-        #    sock.connect((HOST, PORT))
-
-        #    a=input()
-        #    sock.sendall(bytes(finalData,encoding="utf-8"))
-
-        #    # Receive data from the server and shut down
-        #    received = sock.recv(1024)
-        #    received = received.decode("utf-8")
-
-        # finally:
-        #    sock.close()
         print("Done")
+
+class TPM(ColorMain):
+    """ Klasa z widokiem umożliwiającym ustawienia gradientu ledów """
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent,bg=def_color)
+
+        
+        # ustawia odpowiednie szerokosci i wysokości kolumn i rzędów w układzie elementów
+        self.columnconfigure(0, weight = 1)
+        self.columnconfigure(1, weight = 1)
+
+        self.rowconfigure(0, weight = 4)
+        self.rowconfigure(1, weight = 1)
+        self.rowconfigure(2, weight = 1)
+        self.rowconfigure(3, weight = 1)
+        self.rowconfigure(4, weight = 1)
+        # self.rowconfigure(3, weight = 1)
+        # self.rowconfigure(4, weight = 11)
+        self.main_controllFrame = Frame(self, bg=def_color)
+        self.main_controllFrame.grid(column=0, columnspan=2, row=0, sticky = "nsew")
+        # ustawia odpowiednie szerokosci i wysokości kolumn i rzędów w układzie elementów
+        self.main_controllFrame.columnconfigure(0, weight = 1)
+        self.main_controllFrame.columnconfigure(1, weight = 1)
+        self.main_controllFrame.rowconfigure(0, weight = 2)
+        
+        #R1 przyciski nawigujące
+        
+        button1 = ttk.Button(self.main_controllFrame,style = 'TButton' ,text = "Apply", command = lambda: self.apply_gradient(self.colorFrom.get(),self.colorTo.get()))
+        button1.grid(row = 0,column=0, sticky = 'nswe', padx=10, pady=10)
+
+        button2 = ttk.Button(self.main_controllFrame, text = "Back", command = lambda: controller.show_frame(MainPage))
+        button2.grid(row = 0, column=1,sticky = 'nswe', pady=10)
+
+
+        add = ttk.Button(self,style = 'TButton' ,text = "Add", command = lambda: self.add())
+        add.grid(row = 1,column=1, sticky = 'nswe', padx=10, pady=10)
+
+        delete = ttk.Button(self,style = 'TButton' ,text = "Add", command = lambda: self.apply_gradient(self.colorFrom.get(),self.colorTo.get()))
+        delete.grid(row = 2,column=1, sticky = 'nswe', padx=10, pady=10)
+
+        add2 = ttk.Button(self,style = 'TButton' ,text = "Add", command = lambda: self.apply_gradient(self.colorFrom.get(),self.colorTo.get()))
+        add2.grid(row = 3,column=1, sticky = 'nswe', padx=10, pady=10)
+        
+        add3 = ttk.Button(self,style = 'TButton' ,text = "Add", command = lambda: self.apply_gradient(self.colorFrom.get(),self.colorTo.get()))
+        add3.grid(row = 4,column=1, sticky = 'nswe', padx=10, pady=10)
+
+        # Create a ScrolledFrame widget
+        sf = ScrolledFrame(self, bg=def_color)
+        sf.config(background=def_color)
+        sf.grid(row=1,rowspan=4,column=0, sticky="news")
+
+        sf.bind_scroll_wheel(root)
+
+        # Create a frame within the ScrolledFrame
+        inner_frame = sf.display_widget(Frame, bg=def_color)
+  
+        # for i in range(10):
+        #     fr = Frame(inner_frame, bg=def_color)
+        #     fr.grid(column=0, row=i, sticky = "nsew")
+
+        #     fr.columnconfigure(0,weight=1)
+        #     fr.columnconfigure(1,weight=1)
+        #     fr.rowconfigure(0,weight=1)
+        #     # fr.rowconfigure(1,weight=1)
+
+        #     ttk.Button(fr, text = "Back", command=lambda i=i: print(i)).grid(row = 0, column=0,sticky = 'nswe', pady=10)
+        #     ttk.Button(fr, text = "Srack").grid(row = 0, column=1,sticky = 'nswe', pady=10)
+
+    def add(self):
+        pass
+
+             
 
 class GradientFrame(tk.Canvas):
   '''A gradient frame which uses a canvas to draw the background'''
