@@ -143,8 +143,8 @@ void loadData()
         delay(0.5);
       }
 
-      req = client.readStringUntil('\r');
-//      Serial.println(req);
+      req = client.readStringUntil('\n');
+      Serial.println(req);
       Serial.println("loadData() --passing to--> readData()");
       readData();
       loop_index = 0;
@@ -172,6 +172,7 @@ boolean checkForTask() {
   }
   return false;
 }
+
 void led()
 {
   

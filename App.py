@@ -31,6 +31,10 @@ style.configure('Header.Label', font=('Arial', 30, 'bold'), foreground ='#D3D3D3
 style.configure('TButton', font = ('Arial', 20, 'bold'),foreground ='#A8A8A8', background="#353535")
 style.configure('TCheckbutton', font=('Arial', 10),foreground ='#A8A8A8', background="#353535")
 
+s = ttk.Style()
+s.configure("TMenubutton", background="red")
+
+
 def hex_rgb(col):
     return tuple(int(col.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
 
@@ -52,7 +56,7 @@ class Main():
         self.frames = {}
 
         # tworzy i ustawia wartości początkowe dla istniejących klas (podstron)
-        for fr in (MainPage,OneColorPage, GradientColorPage, TPM):
+        for fr in (MainPage,OneColorPage, GradientColorPage, TPM,SegmentColorPage):
             frame = fr(main_container, self)
             self.frames[fr] = frame
             frame.grid(row = 0, column = 0, sticky = "nsew")
@@ -118,6 +122,7 @@ class ColorMain(tk.Frame):
             elif(var1.get()==0):
                 var2.set(1)
             self.load_color_opt("rgb")
+        
         elif(op=='color_from'):
             if(var1.get()==1):
                 var2.set(0)
@@ -128,6 +133,10 @@ class ColorMain(tk.Frame):
                 var1.set(0)
             elif(var1.get()==0):
                 var2.set(1)
+        
+        if(op=='solid_color'):
+            var1.set(1)
+            var2.set(1)
 
     def load_color_opt(self, opt):
 
@@ -354,6 +363,7 @@ class OneColorPage(ColorMain):
 class GradientColorPage(ColorMain):
     """ Klasa z widokiem umożliwiającym ustawienia gradientu ledów """
     def __init__(self, parent, controller):
+
         tk.Frame.__init__(self, parent,bg=def_color)
 
         
@@ -403,7 +413,7 @@ class GradientColorPage(ColorMain):
 
         # obszar z podglądem wybranego koloru
         # Label(self, text="\n\n\n\n",bg=self.colorTmp, fg=fgvar).grid(row=2, column=0, columnspan=2,sticky="nesw", pady=50,padx=50)
-        GradientFrame(self,self.colorFrom, self.colorTo).grid(row=2, column=0, columnspan=2,sticky="nesw")
+        self.GF=GradientFrame(self,self.colorFrom, self.colorTo).grid(row=2, column=0, columnspan=2,sticky="nesw")
 
         xFrame = Frame(self, bg=def_color)
         xFrame.grid(column=0, columnspan=2, row=3, sticky = "nsew")
@@ -429,6 +439,7 @@ class GradientColorPage(ColorMain):
         self.colorTmp.trace_add('write', lambda name, index, mode, c1=col1,c2=col2: self.my_callback(c1,c2)) 
     
         self.load_color_opt("basic")     
+    
     def print_item_values(self):
         print(self.delayNum.get())
 
@@ -441,7 +452,190 @@ class GradientColorPage(ColorMain):
             self.colorTo.set(self.colorTmp.get())
 
         # ustawia podgląd gradientu
-        GradientFrame(self, self.colorFrom, self.colorTo, borderwidth=1, relief="sunken").grid(row=2, column=0, columnspan=2,sticky="nesw", pady=50,padx=50)
+        self.GF=GradientFrame(self, self.colorFrom, self.colorTo, borderwidth=1, relief="sunken").grid(row=2, column=0, columnspan=2,sticky="nesw")
+    
+    def apply_gradient(self,colorFrom,colorTo):
+        """ Funkcja obliczająca kolory wchodzące w skład gradientu i przekazujące je dalej do wysłania. """
+
+        colors = list(Color(colorFrom).range_to(Color(colorTo),80))
+        
+        print("LEN: ", len(colors))
+        
+        LED={}
+        LED["num"]=80
+        LED["del"]=str((float(self.delayNum.get())*1000))
+
+        for i in range(len(colors)):
+            c=colors[i]
+            
+            # DO POPRAWIENIA! 
+            if(len(str(c))==4 or str(c)[0] is not '#'):
+                print(c)
+                c="#000000"
+                
+            col=hex_rgb(str(c))
+            m={}
+            m["red"]=str(col[0])
+            m["green"]=str(col[1])
+            m["blue"]=str(col[2])
+
+            LED["L"+str(i)]=m
+
+        
+
+
+        print(LED)
+        self.send(LED)
+
+        print("Done")
+
+class TPM(ColorMain):
+    """ Klasa z widokiem umożliwiającym ustawienia gradientu ledów """
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent,bg=def_color)
+
+        
+        # ustawia odpowiednie szerokosci i wysokości kolumn i rzędów w układzie elementów
+        self.columnconfigure(0, weight = 1)
+        self.columnconfigure(1, weight = 5)
+
+        self.rowconfigure(0, weight = 1)
+        self.rowconfigure(1, weight = 8)
+        
+        self.main_controllFrame = Frame(self, bg=def_color)
+        self.main_controllFrame.grid(column=0, columnspan=2, row=0, sticky = "nsew")
+        # ustawia odpowiednie szerokosci i wysokości kolumn i rzędów w układzie elementów
+        self.main_controllFrame.columnconfigure(0, weight = 1)
+        self.main_controllFrame.columnconfigure(1, weight = 1)
+        self.main_controllFrame.rowconfigure(0, weight = 2)
+        
+
+        self.leftFrame=Frame(self, bg='red')
+        self.leftFrame.grid(column=0, row=1,  sticky = "nsew")
+
+
+        self.rightFrame=Frame(self, bg='green')
+        self.rightFrame.grid(column=1, row=1,  sticky = "nsew")
+        self.rightFrame.rowconfigure(0, weight = 1)
+        self.rightFrame.rowconfigure(1, weight = 8)
+        self.rightFrame.rowconfigure(3, weight = 8)
+        self.rightFrame.columnconfigure(0, weight = 1)
+        self.rightFrame.columnconfigure(1, weight = 1)
+
+        #R1 przyciski nawigujące
+        button1 = ttk.Button(self.main_controllFrame,style = 'TButton' ,text = "Apply", command = lambda: self.apply_gradient(self.colorFrom.get(),self.colorTo.get()))
+        button1.grid(row = 0,column=0, sticky = 'nswe', padx=10, pady=10)
+
+        button2 = ttk.Button(self.main_controllFrame, text = "Back", command = lambda: controller.show_frame(MainPage))
+        button2.grid(row = 0, column=1,sticky = 'nswe', pady=10)
+
+        self.loadRightFrame()
+
+        self.leftFrame.rowconfigure(0, weight = 1)
+        self.leftFrame.rowconfigure(1, weight = 10)
+        self.leftFrame.columnconfigure(0, weight = 1)
+        self.leftFrame.columnconfigure(1, weight = 1)
+        self.leftFrame.columnconfigure(2, weight = 1)
+        self.leftFrame.columnconfigure(3, weight = 1)
+       
+        tree = Treeview(self.leftFrame,selectmode="extended",columns=("OD","DO","Del","Col1","Col2"))
+        tree.grid(row=1, column=0,columnspan=4, sticky="news", pady=50, padx=10)
+        tree.heading("#0", text="Seq")
+        tree.column("#0",minwidth=0,width=100, stretch=NO)
+        
+        tree.heading("OD", text="OD")   
+        tree.column("OD",minwidth=0,width=100, stretch=NO) 
+
+        tree.heading("DO", text="DO")   
+        tree.column("DO",minwidth=0,width=100, stretch=NO)
+
+        tree.heading("Del", text="Del")   
+        tree.column("Del",minwidth=0,width=100, stretch=NO)
+
+        tree.heading("Col1", text="Col")   
+        tree.column("Col1",minwidth=0,width=100,stretch=YES)
+
+        tree.heading("Col2", text=" ")   
+        tree.column("Col2",minwidth=0,width=100, stretch=YES)
+
+        tree.insert('', 'end', 'foo', text='Foo', values=[1,2,3], tags=['red_fg'])
+        tree.insert('foo', 'end', text='Foo', values=[1,2,3], tags=['red_fg'])
+
+
+        # self.listBox =  ttk.Treeview(self.leftFrame, columns=cols, show='headings')
+        # self.listBox.column("SEQ", minwidth=0, width=100, stretch=NO)
+        # for col in cols:
+        #    self.listBox.heading(col, text=col)  
+        # self.listBox
+        
+
+        ttk.Button(self.leftFrame, text = "Add seq", command = lambda: controller.show_frame(SegmentColorPage)).grid(row = 0, column=0,sticky = 'nswe', pady=10)
+        ttk.Button(self.leftFrame, text = "Add").grid(row = 0, column=1,sticky = 'nswe', pady=10)
+        ttk.Button(self.leftFrame, text = "Delete").grid(row = 0, column=2,sticky = 'nswe', pady=10)
+        ttk.Button(self.leftFrame, text = "Add delay").grid(row = 0, column=3,sticky = 'nswe', pady=10)
+
+    def loadRightFrame(self):
+        # wartości początkowe:
+        self.brightness=ColorVar(value='white') # jasność koloru
+        
+        self._colorValue=ColorVar(value='black') # barwa koloru
+        self.colorTmp = ColorVar(value='black') # zmienna pomocnicza dla wizualizacji ustawianego koloru
+        self.colorFrom=ColorVar(value='black') 
+        self.colorTo=ColorVar(value='black') 
+        # zmienne dla pasków wyboru
+        
+        fgvar = ColorVar(value='white')
+
+        
+        col1 = IntVar(value=1)
+        col2 = IntVar(value=0)
+        
+        tk.Checkbutton(self.rightFrame, command=lambda: self.switchVar('color_from', col1,col2),   activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="Start color", variable=col1).grid(row=0, column=0, sticky="news",padx=10,pady=10)    
+        tk.Checkbutton(self.rightFrame, command=lambda: self.switchVar('color_to',col1,col2),  activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="End color", variable=col2).grid(row=0, column=1, sticky="news",padx=10,pady=10)
+        
+
+        # obszar z podglądem wybranego koloru
+        # Label(self, text="\n\n\n\n",bg=self.colorTmp, fg=fgvar).grid(row=2, column=0, columnspan=2,sticky="nesw", pady=50,padx=50)
+        self.GF=GradientFrame(self.rightFrame,self.colorFrom, self.colorTo).grid(row=1, column=0, columnspan=2,sticky="nesw")
+
+        xFrame = Frame(self.rightFrame, bg=def_color)
+        xFrame.grid(column=0, columnspan=2, row=2, sticky = "nsew")
+        xFrame.columnconfigure(0, weight = 3)
+        xFrame.columnconfigure(1, weight = 3)
+        xFrame.columnconfigure(2, weight = 1)
+        
+
+        var1 = IntVar(value=1)
+        var2 = IntVar(value=0)
+        tk.Checkbutton(xFrame, command=lambda: self.switchVar('basic', var1,var2),   activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="Basic color chooser", variable=var1).grid(row=0, column=0, sticky="news",padx=10,pady=10)    
+        tk.Checkbutton(xFrame, command=lambda: self.switchVar('rgb',var1,var2),  activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="RGB color chooser", variable=var2).grid(row=0, column=1, sticky="news",padx=10,pady=10)
+
+        self.delayNum =Spinbox(xFrame, foreground ='red', background="#353535",font=('Arial', 15), from_=0, to=1,format="%.2f",text="S",increment=0.01 ,justify=CENTER,width=30,command=self.print_item_values)
+        self.delayNum .grid(row=0,column=2, sticky="nwes",padx=10,pady=10)
+        
+        # self.grid_rowconfigure(3, weight=4) # this needed to be added
+        # self.grid_columnconfigure(2, weight=24) # as did this
+
+        self.color_chooser_frame = Frame(self.rightFrame)
+        self.color_chooser_frame.grid(column=0, columnspan=2, row=3, sticky = "nsew")
+
+        self.colorTmp.trace_add('write', lambda name, index, mode, c1=col1,c2=col2: self.my_callback(c1,c2)) 
+    
+        self.load_color_opt("basic") 
+        
+    def print_item_values(self):
+        print(self.delayNum.get())
+
+    def my_callback(self,col1,col2): 
+        """ Funkcja ustawiająca kolor koloru od/do """
+
+        if(col1.get()):
+            self.colorFrom.set(self.colorTmp.get())
+        elif(col2.get()):
+            self.colorTo.set(self.colorTmp.get())
+
+        # ustawia podgląd gradientu
+        self.GF=GradientFrame(self.rightFrame,self.colorFrom, self.colorTo).grid(row=1, column=0, columnspan=2,sticky="nesw")
 
     def apply_gradient(self,colorFrom,colorTo):
         """ Funkcja obliczająca kolory wchodzące w skład gradientu i przekazujące je dalej do wysłania. """
@@ -471,82 +665,213 @@ class GradientColorPage(ColorMain):
             LED["L"+str(i)]=m
 
         
-        print(LED)
-        self.send(LED)
+            print(LED)
+            self.send(LED)
 
-        print("Done")
-
-class TPM(ColorMain):
+            print("Done")
+            
+class SegmentColorPage(ColorMain):
     """ Klasa z widokiem umożliwiającym ustawienia gradientu ledów """
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent,bg=def_color)
 
-        
         # ustawia odpowiednie szerokosci i wysokości kolumn i rzędów w układzie elementów
         self.columnconfigure(0, weight = 1)
         self.columnconfigure(1, weight = 1)
-
-        self.rowconfigure(0, weight = 4)
+        self.columnconfigure(2, weight = 1)
+        self.columnconfigure(3, weight = 1)
+        self.rowconfigure(0, weight = 2)
         self.rowconfigure(1, weight = 1)
-        self.rowconfigure(2, weight = 1)
-        self.rowconfigure(3, weight = 1)
-        self.rowconfigure(4, weight = 1)
-        # self.rowconfigure(3, weight = 1)
-        # self.rowconfigure(4, weight = 11)
+        self.rowconfigure(3, weight = 4)
+        # self.rowconfigure(4, weight = 4)
+        # self.rowconfigure(5, weight = 4)
+        
         self.main_controllFrame = Frame(self, bg=def_color)
-        self.main_controllFrame.grid(column=0, columnspan=2, row=0, sticky = "nsew")
+        self.main_controllFrame.grid(column=0, columnspan=4, row=0, sticky = "nsew")
         # ustawia odpowiednie szerokosci i wysokości kolumn i rzędów w układzie elementów
         self.main_controllFrame.columnconfigure(0, weight = 1)
         self.main_controllFrame.columnconfigure(1, weight = 1)
         self.main_controllFrame.rowconfigure(0, weight = 2)
         
-        #R1 przyciski nawigujące
-        
-        button1 = ttk.Button(self.main_controllFrame,style = 'TButton' ,text = "Apply", command = lambda: self.apply_gradient(self.colorFrom.get(),self.colorTo.get()))
+        # przyciski nawigujące
+        button1 = ttk.Button(self.main_controllFrame,style = 'TButton' ,text = "Apply", command = lambda: self.applySegment())
         button1.grid(row = 0,column=0, sticky = 'nswe', padx=10, pady=10)
 
         button2 = ttk.Button(self.main_controllFrame, text = "Back", command = lambda: controller.show_frame(MainPage))
         button2.grid(row = 0, column=1,sticky = 'nswe', pady=10)
 
-
-        add = ttk.Button(self,style = 'TButton' ,text = "Add", command = lambda: self.add())
-        add.grid(row = 1,column=1, sticky = 'nswe', padx=10, pady=10)
-
-        delete = ttk.Button(self,style = 'TButton' ,text = "Add", command = lambda: self.apply_gradient(self.colorFrom.get(),self.colorTo.get()))
-        delete.grid(row = 2,column=1, sticky = 'nswe', padx=10, pady=10)
-
-        add2 = ttk.Button(self,style = 'TButton' ,text = "Add", command = lambda: self.apply_gradient(self.colorFrom.get(),self.colorTo.get()))
-        add2.grid(row = 3,column=1, sticky = 'nswe', padx=10, pady=10)
+        # wartości początkowe:
+        self.brightness=ColorVar(value='white') # jasność koloru
+        self._colorValue=ColorVar(value='black') # barwa koloru
+        self.colorTmp = ColorVar(value='black') # zmienna pomocnicza dla wizualizacji ustawianego koloru
         
-        add3 = ttk.Button(self,style = 'TButton' ,text = "Add", command = lambda: self.apply_gradient(self.colorFrom.get(),self.colorTo.get()))
-        add3.grid(row = 4,column=1, sticky = 'nswe', padx=10, pady=10)
+        self.colorsTo=[ColorVar(value='black')]
+        self.colorsFrom=[ColorVar(value='black')]
+        
+        self.edit=[IntVar(value=1)]
+        self.colorsNum=[1]
+        self.active_index=0
+        
+        # zmienne dla pasków wyboru
+        fgvar = ColorVar(value='white')
 
-        # Create a ScrolledFrame widget
-        sf = ScrolledFrame(self, bg=def_color)
-        sf.config(background=def_color)
-        sf.grid(row=1,rowspan=4,column=0, sticky="news")
+        self.colorFrame = Frame(self, bg="red")
+        self.colorFrame.grid(column=0, columnspan=4, row=1, sticky = "nsew")
+        self.colorFrame .columnconfigure(0, weight = 1)
+        self.colorFrame .rowconfigure(0, weight = 1)
+        self.colorFrame .rowconfigure(1, weight = 1)
+        self.colorFrame .rowconfigure(2, weight = 1)
+        # obszar z podglądem wybranego koloru
+        GradientFrame(self.colorFrame,ColorVar(value="black"), ColorVar(value="black")).grid(row=0, column=0,sticky="nesw")
 
-        sf.bind_scroll_wheel(root)
+        
+        var1 = IntVar(value=1)
+        var2 = IntVar(value=0)
+        tk.Checkbutton(self, command=lambda: self.switchVar('basic', var1,var2),   activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="Basic color chooser", variable=var1).grid(row=2,column=0 ,sticky="news",padx=10,pady=10)    
+        tk.Checkbutton(self, command=lambda: self.switchVar('rgb',var1,var2),  activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="RGB color chooser", variable=var2).grid(row=2, column=1,sticky="news",padx=10,pady=10)
+        
+        ttk.Label(self,style="Header.Label", text = "Segments number:", font = LARGE_FONT,justify=RIGHT).grid(row = 2,column=2, padx = 10, pady = 10)
+        self.segmentNum= Spinbox(self, from_=1, to=15,justify=CENTER, command=lambda: self.load_segment_opt(), font=('Arial', 30, 'bold'),foreground ='#A8A8A8', background="#353535")
+        self.segmentNum.grid(row=2,column=3,padx=10,pady=10)
 
-        # Create a frame within the ScrolledFrame
-        inner_frame = sf.display_widget(Frame, bg=def_color)
-  
-        # for i in range(10):
-        #     fr = Frame(inner_frame, bg=def_color)
-        #     fr.grid(column=0, row=i, sticky = "nsew")
+        
+        
+        self.color_chooser_frame = Frame(self)
+        self.color_chooser_frame.grid(column=0, columnspan=3, row=3, sticky = "nsew")
+        self.load_color_opt("basic")      
+        self.load_segment_opt()
 
-        #     fr.columnconfigure(0,weight=1)
-        #     fr.columnconfigure(1,weight=1)
-        #     fr.rowconfigure(0,weight=1)
-        #     # fr.rowconfigure(1,weight=1)
+        self.test_frame = Frame(self,bg=def_color)
+        self.test_frame.grid(column=3,columnspan=2,row=3,sticky="news")
 
-        #     ttk.Button(fr, text = "Back", command=lambda i=i: print(i)).grid(row = 0, column=0,sticky = 'nswe', pady=10)
-        #     ttk.Button(fr, text = "Srack").grid(row = 0, column=1,sticky = 'nswe', pady=10)
+        OPTIONS = [
+        "           Solid        ",
+        "        Gradient     "
+        ] #etc
 
-    def add(self):
-        pass
+        self.variable = StringVar(self.test_frame)
+        self.variable.set(OPTIONS[0]) # default value
 
-             
+        self.w = OptionMenu(self.test_frame, self.variable, *OPTIONS)
+        self.w.config(font=('Arial', 10),foreground ='#A8A8A8', background="#353535")
+        self.w.grid(row=0,column=0,sticky="nesw",padx=10, pady = 10)
+        
+        col1 = IntVar(value=1)
+        col2 = IntVar(value=0)
+        
+        tk.Checkbutton(self.test_frame, command=lambda: self.switchVar('color_from', col1,col2),   activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="Start color", variable=col1).grid(row=0, column=1, sticky="news",padx=10,pady=10)    
+        tk.Checkbutton(self.test_frame, command=lambda: self.switchVar('color_to',col1,col2),  activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="End color", variable=col2).grid(row=0, column=2, sticky="news",padx=10,pady=10)
+        
+        self.slen = StringVar(self.test_frame)
+        self.slen.set("1")
+        ttk.Label(self.test_frame,style="Header.Label", text = "Element length:", font = LARGE_FONT).grid(row = 1,column=0, padx = 10, pady = 10) 
+        self.el_NUM=Spinbox(self.test_frame, from_=1, to=10,justify=CENTER, command=lambda: self.load_element_opt(), font=('Arial', 15, 'bold'),foreground ='#A8A8A8', background="#353535",textvariable=self.slen)
+        self.el_NUM.grid(row=1,column=1,columnspan=2,pady=10)
+        ttk.Label(self.test_frame,style="Header.Label", text = "Delay [s]:", font = LARGE_FONT).grid(row = 2,column=0, padx = 10, pady = 10)
+        self.delayNum =Spinbox(self.test_frame, foreground ='#A8A8A8', background="#353535",font=('Arial', 15), from_=0, to=1,format="%.2f",text="S",increment=0.01 ,justify=CENTER,width=30)
+        self.delayNum .grid(row=2,column=1,columnspan=2, sticky="nwes",padx=10,pady=10)
+ 
+        button314= ttk.Button(self.test_frame,style = 'TButton' ,text = "Delete", command = lambda: self.apply(self._colorValue.get(),self.brightness.get()))
+        button314.grid(row = 3, column=0, columnspan=4, pady=10)
+
+        self.colorTmp.trace_add('write', lambda name, index, mode, c1=col1,c2=col2: self.my_callback(c1,c2,self.active_index)) 
+
+    
+    def load_segment_opt(self):
+        # pass
+        for widget in self.colorFrame.winfo_children():
+            widget.destroy()
+        
+        if(int(self.segmentNum.get())>len(self.colorsTo)):
+            self.colorsFrom.append(ColorVar(value='black'))
+            self.colorsTo.append(ColorVar(value='black'))
+            self.edit.append(IntVar(value=0))
+            self.colorsNum.append(1)
+
+        elif(int(self.segmentNum.get())>len(self.colorsTo)):
+            self.colorsFrom.pop()
+            self.colorsTo.pop()
+            self.edit.pop()
+            self.colorsNum.pop()
+
+        for i in range(int(self.segmentNum.get())):
+            self.colorFrame.columnconfigure(i, weight = 1)
+            self.colorFrame.columnconfigure(i+1, weight = 0)
+            GradientFrame(self.colorFrame, self.colorsFrom[i], self.colorsTo[i], borderwidth=1, relief="sunken").grid(row=0, column=i,sticky="nesw",padx=1)
+
+            tk.Checkbutton(self.colorFrame,variable=self.edit[i], command=lambda i=i:self.set_as_editing(i), activebackground='red',foreground ='red', background="#353535",font=('Arial', 15), text="Edit").grid(row=1,column=i ,sticky="nesw",padx=10)    
+    def load_element_opt(self):
+        print(self.el_NUM.get())
+        self.colorsNum[self.active_index]=int(self.el_NUM.get())
+
+    def set_as_editing(self,active):
+        for i in range(len(self.edit)):
+            self.edit[i].set(0)
+
+        self.edit[active].set(1)
+        self.active_index=active
+        self.slen.set(self.colorsNum[self.active_index])
+        
+        for i in range(len(self.edit)):
+            print(self.edit[i].get(),end=" ")
+        print()
+
+    def my_callback(self,col1,col2,i): 
+        """ Funkcja ustawiająca kolor od/do """
+        print("EDITING: "+str(i))
+        if(self.variable.get()=="        Gradient     "):
+            if(col1.get()):
+                self.colorsFrom[i].set(self.colorTmp.get())
+            elif(col2.get()):
+                self.colorsTo[i].set(self.colorTmp.get())
+        else:
+            self.colorsTo[i].set(self.colorTmp.get())
+            self.colorsFrom[i].set(self.colorTmp.get())
+
+        # ustawia podgląd gradientu
+        GradientFrame(self.colorFrame, self.colorsFrom[i], self.colorsTo[i], borderwidth=1, relief="sunken").grid(row=0, column=i,sticky="nesw")
+    
+    def applySegment(self):
+        """ Funkcja obliczająca kolory wchodzące w skład segmentu i przekazujące je dalej do wysłania. """
+        print(self.colorsNum)
+        print(self.segmentNum.get())
+        
+        LED={}
+
+        for seg in range(int(self.segmentNum.get())):
+            colors = list(Color(self.colorsFrom[seg].get()).range_to(Color(self.colorsTo[seg].get()),self.colorsNum[seg]))
+
+            print("LEN: ", len(colors))
+
+            
+            
+            segment={}
+            segment["num"]=self.colorsNum[seg]
+            segment["del"]=str((float(self.delayNum.get())*1000))
+
+            for i in range(len(colors)):
+                c=colors[i]
+
+                # DO POPRAWIENIA! 
+                if(len(str(c))==4 or str(c)[0] is not '#'):
+                    print(c)
+                    c="#000000"
+
+                col=hex_rgb(str(c))
+                m={}
+                m["red"]=str(col[0])
+                m["green"]=str(col[1])
+                m["blue"]=str(col[2])
+
+                segment["L"+str(i)]=m
+
+            LED["S"+str(seg)]=segment
+
+
+            print(LED)
+            # self.send(LED)
+
+            print("Done")
 
 class GradientFrame(tk.Canvas):
   '''A gradient frame which uses a canvas to draw the background'''
@@ -576,6 +901,6 @@ class GradientFrame(tk.Canvas):
       self.lower("gradient")  
           
 app = Main(root)
-root.geometry("1280x720")
+root.geometry("1500x720")
 root["bg"] = def_color
 root.mainloop()
