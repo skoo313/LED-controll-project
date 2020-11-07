@@ -1,11 +1,15 @@
 #include <ESP8266WiFi.h>
 #include <ArduinoJson.h>
-#include <string>
 
 #include <Adafruit_NeoPixel.h>
 #ifdef _AVR_
 #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
 #endif
+
+#include <pthread.h>
+
+#include <string>
+#include <vector>
 
 #define PIN        14 // On Trinket or Gemma, suggest changing this to 1
 #define NUMPIXELS_MAX 80
@@ -23,9 +27,99 @@ const char *password = "CzsG2tbkj4uc";  // wifi Password
 WiFiClient client;
 WiFiClient newClient;
 
+
+class Segment
+{
+    unsigned short num, br , del;
+    unsigned short offset;
+    short loop_index = 0; //indeks aktualnie ustawiuanego pixela
+    std::vector<short> r, g, b;
+
+  public:
+    Segment(int n, int d = 0, int of = 0 , int b = 0)
+    {
+      num = n;
+      br = b;
+      del = d;
+      offset = of;
+
+    }
+
+    void clearPixels()
+    {
+      r.clear();
+      g.clear();
+      b.clear();
+    }
+    void printData()
+    {
+      Serial.print("Num: ");
+      Serial.println(num);
+      Serial.print("Br:");
+      Serial.println(br);
+      Serial.print("DEL:");
+      Serial.println(del);
+
+      for ( size_t i = 0; i < r.size(); i++ )
+      {
+        Serial.print(" (");
+        Serial.print(r[i]);
+        Serial.print(",");
+        Serial.print(g[i]);
+        Serial.print(",");
+        Serial.print(b[i]);
+        Serial.print(",");
+        Serial.println(")");
+      }
+    }
+    void addPixel(int red, int green, int blue)
+    {
+      r.push_back(red);
+      g.push_back(green);
+      b.push_back(blue);
+    }
+
+    void led()
+    {
+
+
+      pixels.setPixelColor(loop_index + offset, b[loop_index], r[loop_index], g[loop_index]);
+
+      if (br) //ustawia jasnosc
+        pixels.setBrightness(br);
+
+      if (del > 0)
+      {
+        delay(del);
+        pixels.show();
+      }
+
+      loop_index++;
+
+
+      if (loop_index  >= num )
+      {
+        loop_index = 0;
+
+        if (del <= 0 )
+        { pixels.show();
+
+        }
+
+      }
+
+      if (del > 0 && loop_index == 0)
+        pixels.clear();
+
+
+    }
+};
+
 //request for led's and file stored in flash memo with last use req
 String req = "";
 const char* filename = "/samplefile.txt";
+
+std::vector <Segment> allData;
 
 void setup()
 {
@@ -99,9 +193,7 @@ void setup()
     Serial.println(req);
     readData();
   }
-
   Serial.println("Kończę setup");
-
 }
 //liczba, jasność, opóźnienie i kolory
 unsigned short int num = -1, br = -1, del = 0, r[NUMPIXELS_MAX], g[NUMPIXELS_MAX], b[NUMPIXELS_MAX];
@@ -121,19 +213,22 @@ void loop()
   }
 
   //funkcja obsługująca ledy
-  led();
-  pixels.show();
+
+  for ( size_t i = 0; i < allData.size(); i++ )
+    allData[i].led();
+
+
 }
 
 //Funkcja przyjmująca dane od połączonego klienta i przekazująca ją do funkcji odczytującej dane
 void loadData()
 {
   Serial.println("LOAD_DATA - start");
- 
+
   if (client.connected())
   {
     Serial.println("Client Connected");
-    
+
     while (client.connected())
     {
       // Wait until the client sends some data
@@ -173,41 +268,14 @@ boolean checkForTask() {
   return false;
 }
 
-void led()
-{
-  
-  pixels.setPixelColor(loop_index, b[loop_index], r[loop_index], g[loop_index]);
 
-  if (br) //ustawia jasnosc
-    pixels.setBrightness(br);
-
-  if (del > 0)
-  {
-    delay(del);
-    pixels.show();
-  }
-
-  loop_index++;
-
-
-  if (loop_index > NUMPIXELS_MAX )
-  {
-    loop_index = 0;
-
-  }
-
-  if (del > 0 && loop_index == 0)
-    pixels.clear();
-
-
-}
 bool readData()
 {
 
   //JSON----------------------------------------
   static const size_t capacity = JSON_OBJECT_SIZE(3) + JSON_ARRAY_SIZE(2) + 60;
   DynamicJsonBuffer jsonBuffer(capacity);
-  
+
   // Parse JSON object
   JsonObject& jObj = jsonBuffer.parseObject(req);
 
@@ -235,33 +303,37 @@ bool readData()
       f.print(req);
       f.close();  //Close file
     }
+    for ( size_t i = 0; i < allData.size(); i++ )
+      allData[i].clearPixels();
 
-    
+    allData.clear();
+    int offset = 0;
     //odczytuje dane z jsona
-    num = jObj["num"];
-    br = jObj["brightness"];
-    del = jObj["del"];
-//    br = (br < 0) ? -1 : br;
-    Serial.print(num);
-    Serial.print(" ---- ");
-    Serial.print(br);
-    Serial.print(" ---- ");
-    Serial.print(del);
-    Serial.print(" ---- ");
-    Serial.println();
-
-    //odczytuje dane pixeli
-    for (int i = 0; i < num; i++)
+    for (int i = 0; i < jObj["SegNum"]; i++)
     {
-      r[i] = int(jObj["L" + String(i)]["red"]);
-      g[i] = int(jObj["L" + String(i)]["green"]);
-      b[i] = int(jObj["L" + String(i)]["blue"]);
-      Serial.print(r[i]);
-      Serial.print(" , ");
-      Serial.print(g[i]);
-      Serial.print(" , ");
-      Serial.print(b[i]);
-      Serial.println();
+      Serial.println("-----------------------------------------------");
+      Serial.println(i);
+      Serial.println("-----------------------------------------------");
+      Serial.println(offset);
+      Segment tmp(jObj["S" + String(i)]["num"], jObj["S" + String(i)]["del"], offset,jObj["S" + String(i)]["brightness"]);
+      offset += int(jObj["S" + String(i)]["num"]);
+      allData.push_back(tmp);
+
+      //odczytuje dane pixeli
+      for (int j = 0; j < jObj["S" + String(i)]["num"]; j++)
+      {
+        allData[i].addPixel(int(jObj["S" + String(i)]["L" + String(j)]["red"]), int(jObj["S" + String(i)]["L" + String(j)]["green"]), int(jObj["S" + String(i)]["L" + String(j)]["blue"]));
+
+      }
+      allData[i].printData();
+
+
     }
+
+    if (offset < NUMPIXELS_MAX)
+      for (int x = offset; x <= NUMPIXELS_MAX; x++)
+        pixels.setPixelColor(x, 0, 0, 0);
+
   }
+
 }
