@@ -566,10 +566,10 @@ class TPM(ColorMain):
         self.main_controllFrame.columnconfigure(1, weight=1)
         self.main_controllFrame.rowconfigure(0, weight=2)
 
-        self.leftFrame = Frame(self, bg='red')
+        self.leftFrame = Frame(self, bg=def_color)
         self.leftFrame.grid(column=0, row=1,  sticky="nsew")
 
-        self.rightFrame = Frame(self, bg='green')
+        self.rightFrame = Frame(self, bg=def_color)
         self.rightFrame.grid(column=1, row=1,  sticky="nsew")
         self.rightFrame.rowconfigure(0, weight=1)
         self.rightFrame.rowconfigure(1, weight=8)
@@ -721,8 +721,6 @@ class SegmentColorPage(ColorMain):
         self.rowconfigure(0, weight=2)
         self.rowconfigure(1, weight=1)
         self.rowconfigure(3, weight=4)
-        # self.rowconfigure(4, weight = 4)
-        # self.rowconfigure(5, weight = 4)
 
         self.main_controllFrame = Frame(self, bg=def_color)
         self.main_controllFrame.grid(
@@ -741,68 +739,70 @@ class SegmentColorPage(ColorMain):
                              command=lambda: controller.show_frame(MainPage))
         button2.grid(row=0, column=1, sticky='nswe', pady=10)
 
-        # wartości początkowe:
+        # wartości początkowe (zmienne do wizualizacji):
         self.brightness = ColorVar(value='white')  # jasność koloru
         self._colorValue = ColorVar(value='black')  # barwa koloru
         # zmienna pomocnicza dla wizualizacji ustawianego koloru
         self.colorTmp = ColorVar(value='black')
 
+        # listy przechowujace dane o kolorach w segmencie
         self.colorsTo = [ColorVar(value='black')]
         self.colorsFrom = [ColorVar(value='black')]
 
+        # zmienna do checkbox ow 
         self.edit = [IntVar(value=1)]
+
+        # dlugosc danego koloru
         self.colorsNum = [1]
+
+        # ,,linie czasu" - ktore segmenty maja byc zapalane razem
         self.timelinesMembers = [[0]]
 
+        # indeks aktualnie edytowanego elementu
         self.active_index = 0
 
         # zmienne dla pasków wyboru
         fgvar = ColorVar(value='white')
 
-        self.colorFrame = Frame(self, bg="red")
-        self.colorFrame.grid(column=0, columnspan=4, row=1, sticky="nsew")
-        self.colorFrame .columnconfigure(0, weight=1)
-        self.colorFrame .rowconfigure(0, weight=1)
-        self.colorFrame .rowconfigure(1, weight=1)
-        self.colorFrame .rowconfigure(2, weight=1)
-        # obszar z podglądem wybranego koloru
-        GradientFrame(self.colorFrame, ColorVar(value="black"), ColorVar(
-            value="black")).grid(row=0, column=0, sticky="nesw")
-
-        # wybór koloru rgb
+        self.loadColorFrame()
+        
+        self.addSegmentFrame = Frame(self,bg=def_color)
+        self.addSegmentFrame.grid(
+            column=0, columnspan=4, row=2, sticky="nsew")
+        
+        #  ----- wybór koloru rgb -----
         var1 = IntVar(value=1)
         var2 = IntVar(value=0)
-        tk.Checkbutton(self, command=lambda: self.switchVar('basic', var1, var2),   activebackground='red', foreground='red', background="#353535", font=(
+        tk.Checkbutton(self.addSegmentFrame, command=lambda: self.switchVar('basic', var1, var2),   activebackground='red', foreground='red', background="#353535", font=(
             'Arial', 15), text="Basic color chooser", variable=var1).grid(row=2, column=0, sticky="news", padx=10, pady=10)
-        tk.Checkbutton(self, command=lambda: self.switchVar('rgb', var1, var2),  activebackground='red', foreground='red', background="#353535", font=(
+        tk.Checkbutton(self.addSegmentFrame, command=lambda: self.switchVar('rgb', var1, var2),  activebackground='red', foreground='red', background="#353535", font=(
             'Arial', 15), text="RGB color chooser", variable=var2).grid(row=2, column=1, sticky="news", padx=10, pady=10)
-        #-------------------------
+        # -------------------------
 
-        # liczba segmentów
-        ttk.Label(self, style="Header.Label", text="Segments number:",
-                  font=LARGE_FONT, justify=RIGHT).grid(row=2, column=2, padx=10, pady=10)
+        # ----- liczba segmentów -----
+        ttk.Label(self.addSegmentFrame, style="Header.Label", text="Segments number:",font=LARGE_FONT, justify=RIGHT).grid(row=2, column=3, padx=10, pady=10)
         
-        self.segmentNum = Spinbox(self, from_=1, to=15, justify=CENTER, command=lambda: self.load_segment_opt(), font=('Arial', 30, 'bold'), foreground='#A8A8A8', background="#353535")
-        self.segmentNum.grid(row=2, column=3, padx=10, pady=10)
-        #-------------------------
+        self.segmentNum = Spinbox(self.addSegmentFrame, from_=1, to=15, justify=CENTER, command=lambda: self.load_segment_opt(), font=('Arial', 30, 'bold'), foreground='#A8A8A8', background="#353535")
+        self.segmentNum.grid(row=2, column=4, padx=10, pady=10)
+        # -------------------------
 
 
-        # frame z wyborem koloru
-        self.color_chooser_frame = Frame(self)
-        self.color_chooser_frame.grid(
-            column=0, columnspan=3, row=3, sticky="nsew")
-        self.color_chooser_frame .columnconfigure(0, weight=1)
+        # ----- frame z wyborem koloru -----
+        self.color_chooser_frame = Frame(self,bg=def_color)
+        self.color_chooser_frame.grid(column=0, columnspan=2, row=3, sticky="nsew")
+        self.color_chooser_frame.columnconfigure(0, weight=1)
+
         self.load_color_opt("basic")
         self.load_segment_opt()
         #-------------------------
 
-        # ramka opcji segmentu
-        self.test_frame = Frame(self, bg=def_color)
-        self.test_frame.grid(column=3, columnspan=2, row=3, sticky="news")
-        self.test_frame .columnconfigure(0, weight=1)
-        self.test_frame .columnconfigure(1, weight=1)
-        self.test_frame .columnconfigure(2, weight=1)
-        self.test_frame .columnconfigure(3, weight=1)
+        # ----- ramka opcji segmentu -----
+        self.segmentOptFrame = Frame(self, bg=def_color)
+        self.segmentOptFrame.grid(column=2, columnspan=2, row=3, sticky="news")
+        self.segmentOptFrame .columnconfigure(0, weight=1)
+        self.segmentOptFrame .columnconfigure(1, weight=1)
+        self.segmentOptFrame .columnconfigure(2, weight=1)
+        self.segmentOptFrame .columnconfigure(3, weight=1)
         
         # wybór solid/gradient 
         OPTIONS = [
@@ -810,28 +810,29 @@ class SegmentColorPage(ColorMain):
             "        Gradient     "
         ]  # etc
 
-        self.variable = StringVar(self.test_frame)
-        self.variable.set(OPTIONS[0])  # default value
+        self.colorMode = StringVar(self.segmentOptFrame)
+        self.colorMode.set(OPTIONS[0])  # default value
 
-        self.w = OptionMenu(self.test_frame, self.variable, *OPTIONS)
-        self.w.config(font=('Arial', 10), foreground='#A8A8A8',background="#353535")
-        self.w.grid(row=0, column=0, sticky="nesw", padx=10, pady=10)
+        self.colorModeChooser = OptionMenu(self.segmentOptFrame, self.colorMode, *OPTIONS)
+        self.colorModeChooser.config(font=('Arial', 10), foreground='#A8A8A8',background="#353535")
+        self.colorModeChooser.grid(row=0, column=0, sticky="nesw", padx=10, pady=10)
 
         col1 = IntVar(value=1)
         col2 = IntVar(value=0)
 
-        tk.Checkbutton(self.test_frame, command=lambda: self.switchVar('color_from', col1, col2),   activebackground='red', foreground='red',background="#353535", font=('Arial', 15), text="Start color", variable=col1).grid(row=0, column=1, sticky="news", padx=10, pady=10)
-        tk.Checkbutton(self.test_frame, command=lambda: self.switchVar('color_to', col1, col2),  activebackground='red', foreground='red',background="#353535", font=('Arial', 15), text="End color", variable=col2).grid(row=0, column=2, sticky="news", padx=10, pady=10)
+
+        tk.Checkbutton(self.segmentOptFrame, command=lambda: self.switchVar('color_from', col1, col2),   activebackground='red', foreground='red',background="#353535", font=('Arial', 15), text="Start color", variable=col1).grid(row=0, column=1, sticky="news", padx=10, pady=10)
+        tk.Checkbutton(self.segmentOptFrame, command=lambda: self.switchVar('color_to', col1, col2),  activebackground='red', foreground='red',background="#353535", font=('Arial', 15), text="End color", variable=col2).grid(row=0, column=2, sticky="news", padx=10, pady=10)
         #-------------------------
 
         # Ilość pixeli w jednym segmencie
-        self.slen = StringVar(self.test_frame)
+        self.slen = StringVar(self.segmentOptFrame)
         self.slen.set("1")
-        ttk.Label(self.test_frame, style="Header.Label", text="Element length:",
-                  font=LARGE_FONT).grid(row=1, column=0, padx=10, pady=10)
-        self.el_NUM = Spinbox(self.test_frame, from_=1, to=80, justify=CENTER, command=lambda: self.load_element_opt(
+        ttk.Label(self.segmentOptFrame, style="Header.Label", text="Element length:",
+                  font=LARGE_FONT).grid(row=1, column=0, pady=10)
+        self.el_NUM = Spinbox(self.segmentOptFrame, from_=1, to=80, justify=CENTER, command=lambda: self.load_element_opt(
         ), font=('Arial', 15, 'bold'), foreground='#A8A8A8', background="#353535", textvariable=self.slen)
-        self.el_NUM.grid(row=1, column=1, columnspan=2, pady=10)
+        self.el_NUM.grid(row=1, column=1, pady=10)
         #-------------------------
 
 
@@ -839,33 +840,41 @@ class SegmentColorPage(ColorMain):
         self.timelines = [
             "        1      ",
         ] 
-        self.variable2 = StringVar(self.test_frame)
-        self.variable2.set(self.timelines[0])  # default value
+        self.timeLineVar = StringVar(self.segmentOptFrame)
+        self.timeLineVar.set(self.timelines[0])  # default value
 
-        self.delayOpt= OptionMenu(self.test_frame, self.variable2, *self.timelines, command=self.addToTimeLine)
-        self.delayOpt.config(font=('Arial', 10), foreground='#A8A8A8',background="#353535")
-        self.delayOpt.grid(row=2, column=2, sticky="nesw", padx=10, pady=10)
+        self.timeLineChooser= OptionMenu(self.segmentOptFrame, self.timeLineVar, *self.timelines, command=self.addToTimeLine)
+        self.timeLineChooser.config(font=('Arial', 10), foreground='#A8A8A8',background="#353535")
+        self.timeLineChooser.grid(row=2, column=1, sticky="nesw", pady=10)
 
-        button314 = ttk.Button(self.test_frame, style='TButton', text="Add time line", command=lambda: self.addTimeline())
-        button314.grid(row=2, column=0,columnspan=2, pady=10)
+        ttk.Button(self.segmentOptFrame, style='TButton', text="Add time line", command=lambda: self.addTimeline()).grid(row=2, column=0, pady=10)
         
-        ttk.Label(self.test_frame, style="Header.Label", text="Delay [s]:", font=LARGE_FONT).grid(row=3, column=0, padx=10, pady=10)
+        ttk.Label(self.segmentOptFrame, style="Header.Label", text="Delay [s]:", font=LARGE_FONT).grid(row=3, column=0, padx=10, pady=10)
         
-        self.delayNum = Spinbox(self.test_frame, foreground='#A8A8A8', background="#353535", font=('Arial', 15), from_=0, to=1, format="%.2f", text="S", increment=0.01, justify=CENTER, width=30)
-        self.delayNum .grid(row=3, column=1, sticky="nwes", padx=10, pady=10)
+        self.delayNum = Spinbox(self.segmentOptFrame, foreground='#A8A8A8', background="#353535", font=('Arial', 15), from_=0, to=1, format="%.2f", text="S",increment=0.01, justify=CENTER)
+        self.delayNum .grid(row=3, column=1, sticky="nwes", pady=10)
         #-------------------------
         
-
-      
-
         self.colorTmp.trace_add('write', lambda name, index, mode, c1=col1, c2=col2: self.my_callback(c1, c2, self.active_index))
-        # self.variable2.trace_add('write', lambda: self.print_item_values2())
+
+    def loadColorFrame(self):
+        self.colorFrame = Frame(self, bg=def_color)
+        self.colorFrame.grid(column=0, columnspan=4, row=1, sticky="nsew")
+        self.colorFrame .columnconfigure(0, weight=1)
+        self.colorFrame .rowconfigure(0, weight=1)
+        self.colorFrame .rowconfigure(1, weight=1)
+        self.colorFrame .rowconfigure(2, weight=1)
+
+        # obszar z podglądem wybranego koloru
+        GradientFrame(self.colorFrame, ColorVar(value="black"), ColorVar(value="black")).grid(row=0, column=0, sticky="nesw")
+
+
     def addTimeline(self):
         num=int(len(self.timelines))+1
         self.timelines.append("        "+str(num)+"      ")
-        self.delayOpt= OptionMenu(self.test_frame, self.variable2, *self.timelines, command=self.addToTimeLine)
-        self.delayOpt.config(font=('Arial', 10), foreground='#A8A8A8',background="#353535")
-        self.delayOpt.grid(row=2, column=2, sticky="nesw", padx=10, pady=10)
+        self.timeLineChooser= OptionMenu(self.segmentOptFrame, self.timeLineVar, *self.timelines, command=self.addToTimeLine)
+        self.timeLineChooser.config(font=('Arial', 10), foreground='#A8A8A8',background="#353535")
+        self.timeLineChooser.grid(row=2, column=1, sticky="nesw", pady=10)
         self.timelinesMembers.append([])
         print(self.timelinesMembers)
             
@@ -873,13 +882,10 @@ class SegmentColorPage(ColorMain):
         for i in range(len(self.timelinesMembers)):
             if self.active_index in self.timelinesMembers[i]: self.timelinesMembers[i].remove(self.active_index)
             
-        self.timelinesMembers[int(self.variable2.get())-1].append(self.active_index)
+        self.timelinesMembers[int(self.timeLineVar.get())-1].append(self.active_index)
     
         print(self.timelinesMembers)
 
-        # self.timelinesMembers = [[1]]
-        # self.active_index
-        # 
     def definedPixels(self, index):
         num=0
         for i in range(index):
@@ -890,7 +896,6 @@ class SegmentColorPage(ColorMain):
         return num
 
     def load_segment_opt(self):
-        # pass
 
         print("load_segment_opt")
         for widget in self.colorFrame.winfo_children():
@@ -918,19 +923,18 @@ class SegmentColorPage(ColorMain):
         print(self.timelinesMembers)
 
         for i in range(int(self.segmentNum.get())):
+            print("W:1 "+str(i))
             self.colorFrame.columnconfigure(i, weight=1)
+            print("W:0 "+str(i+1))
             self.colorFrame.columnconfigure(i+1, weight=0)
             GradientFrame(self.colorFrame, self.colorsFrom[i], self.colorsTo[i], borderwidth=1, relief="sunken").grid(
                 row=0, column=i, sticky="nesw", padx=1)
 
-            tk.Checkbutton(self.colorFrame, variable=self.edit[i], command=lambda i=i: self.set_as_editing(
-                i), activebackground='red', foreground='red', background="#353535", font=('Arial', 15), text="Edit").grid(row=1, column=i, sticky="nesw", padx=10)
-
+            tk.Checkbutton(self.colorFrame, variable=self.edit[i], command=lambda i=i: self.set_as_editing(i), activebackground='red', foreground='red', background="#353535", font=('Arial', 15), text="Edit").grid(row=1, column=i, sticky="nesw", padx=1)
+    
     def load_element_opt(self):
         print(self.el_NUM.get())
         self.colorsNum[self.active_index] = int(self.el_NUM.get())
-
-        
 
     def set_as_editing(self, active):
         for i in range(len(self.edit)):
@@ -939,7 +943,8 @@ class SegmentColorPage(ColorMain):
         self.edit[active].set(1)
         self.active_index = active
         self.slen.set(self.colorsNum[self.active_index])
-
+        self.timeLineChooser
+        
         for i in range(len(self.edit)):
             print(self.edit[i].get(), end=" ")
         print()
@@ -947,7 +952,7 @@ class SegmentColorPage(ColorMain):
     def my_callback(self, col1, col2, i):
         """ Funkcja ustawiająca kolor od/do """
         print("EDITING: "+str(i))
-        if(self.variable.get() == "        Gradient     "):
+        if(self.colorMode.get() == "        Gradient     "):
             if(col1.get()):
                 self.colorsFrom[i].set(self.colorTmp.get())
             elif(col2.get()):
