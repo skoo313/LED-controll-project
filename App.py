@@ -16,7 +16,7 @@ from tkinter import *
 from tkscrolledframe import ScrolledFrame
 # definiuję adres:port modułu wifi z którym bede sie łączył
 HOST, PORT = "192.168.0.241", 8888  # 241   157
-
+#            "192.168.4.22 / 192.168.0.241
 # główne okno aplikacji
 root = tk.Tk()
 
@@ -46,6 +46,7 @@ def hex_rgb(col):
     return tuple(int(col.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
 
 dictionary={"OrangeRed": "#ff4500", "orange":"#ffa500","cyan":"#00FFFF","lime":"#bfff00","chartreuse":"#7fff00", "magenta":"#ff0090","black":"#000000","SpringGreen":"#00ff7f","DeepSkyBlue":"#00bfff", "blue":"#0000ff"}
+
 def error_colors(name):
     global dictionary
     if name in dictionary.keys():
@@ -56,6 +57,13 @@ def error_colors(name):
         print("No such value in dict...")
         return "#000000"
 
+def sequence(*functions):
+    def func(*args, **kwargs):
+        return_value = None
+        for function in functions:
+            return_value = function(*args, **kwargs)
+        return return_value
+    return func
 
 class Main():
     """ Główna klasa aplikacji odpowiedzialna za stworzenie głównych obszarów (Frame) i wypełnianie ich odpowiednią zawartością"""
@@ -74,7 +82,7 @@ class Main():
         self.frames = {}
 
         # tworzy i ustawia wartości początkowe dla istniejących klas (podstron)
-        for fr in (MainPage, OneColorPage, GradientColorPage, TPM, SegmentColorPage):
+        for fr in (MainPage, OneColorPage, GradientColorPage, TPM, SegmentColorPage,OtherOptPage):
             frame = fr(main_container, self)
             self.frames[fr] = frame
             frame.grid(row=0, column=0, sticky="nsew")
@@ -118,10 +126,10 @@ class MainPage(tk.Frame):
         button2.grid(row=1, column=1, sticky='nswe', pady=10)
 
         button3 = ttk.Button(
-            self, text="TPM", command=lambda: controller.show_frame(TPM))
+            self, text="Segment color", command=lambda: controller.show_frame(TPM))
         button3.grid(row=2, column=0, sticky='nswe', padx=10)
 
-        button4 = ttk.Button(self, text="OPT_4")
+        button4 = ttk.Button(self, text="Other options", command=lambda: controller.show_frame(OtherOptPage))
         button4.grid(row=2, column=1, sticky='nswe')
 
 
@@ -134,7 +142,7 @@ class ColorMain(tk.Frame):
         # ustawia odpowiednie szerokosci i wysokości kolumn i rzędów w układzie elementów
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
-
+    
     def switchVar(self, op, var1, var2):
         """ Funkcja ustawiająca wybór użytkownika dotyczący sposobu educji koloru (checkbox'y). Aktywna może być tylko jedna opcja. """
         if(op == 'basic'):
@@ -722,6 +730,7 @@ class SegmentColorPage(ColorMain):
         self.rowconfigure(1, weight=1)
         self.rowconfigure(3, weight=4)
 
+
         self.main_controllFrame = Frame(self, bg=def_color)
         self.main_controllFrame.grid(
             column=0, columnspan=4, row=0, sticky="nsew")
@@ -738,6 +747,7 @@ class SegmentColorPage(ColorMain):
         button2 = ttk.Button(self.main_controllFrame, text="Back",
                              command=lambda: controller.show_frame(MainPage))
         button2.grid(row=0, column=1, sticky='nswe', pady=10)
+        
 
         # wartości początkowe (zmienne do wizualizacji):
         self.brightness = ColorVar(value='white')  # jasność koloru
@@ -867,7 +877,6 @@ class SegmentColorPage(ColorMain):
 
         # obszar z podglądem wybranego koloru
         GradientFrame(self.colorFrame, ColorVar(value="black"), ColorVar(value="black")).grid(row=0, column=0, sticky="nesw")
-
 
     def addTimeline(self):
         num=int(len(self.timelines))+1
@@ -1071,7 +1080,69 @@ class GradientFrame(tk.Canvas):
             self.create_line(i, 0, i, height, tags=("gradient",), fill=color)
         self.lower("gradient")
 
+class OtherOptPage(ColorMain):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent, bg=def_color)
+        # ustawia odpowiednie szerokosci i wysokości kolumn i rzędów w układzie elementów
+        self.columnconfigure(0, weight=1)
+        self.columnconfigure(1, weight=1)
+        self.columnconfigure(2, weight=1)
+        self.columnconfigure(3, weight=1)
+        self.rowconfigure(0, weight=1)
+        self.rowconfigure(1, weight=1)
+        self.rowconfigure(2, weight=6)
 
+        self.main_controllFrame = Frame(self, bg=def_color2)
+        self.main_controllFrame.grid(column=0, columnspan=4, row=0, sticky="nsew")
+
+        # ustawia odpowiednie szerokosci i wysokości kolumn i rzędów w układzie elementów
+        self.main_controllFrame.columnconfigure(0, weight=1)
+        self.main_controllFrame.columnconfigure(1, weight=1)
+        self.main_controllFrame.rowconfigure(0, weight=2)
+
+        # przyciski nawigujące
+        button1 = ttk.Button(self.main_controllFrame, style='TButton',
+                             text="Apply", command=lambda: self.applySegment())
+        button1.grid(row=0, column=0, sticky='nswe', padx=10, pady=10)
+
+        button2 = ttk.Button(self.main_controllFrame, text="Back",
+                             command=lambda: controller.show_frame(MainPage))
+        button2.grid(row=0, column=1, sticky='nswe', pady=10)
+
+        configWifi = ttk.Button(self, style='TButton',text="Configure WiFi", command=lambda: self.WiFiSettings())
+        configWifi.grid(row=1, column=0,columnspan=4, sticky='nswe', padx=10, pady=20)
+
+
+
+    def WiFiSettings(self):   
+        popup = Toplevel()
+        popup.grab_set()
+
+        popup["bg"] = def_color
+        popup.geometry("300x200")
+        popup.columnconfigure(0,weight=1)
+        popup.columnconfigure(1,weight=1)
+        
+        ttk.Label(popup, text="Name",style="Header.Label",font=('Arial', 20, 'bold')).grid(row=0, pady=10)
+        ttk.Label(popup, text="Password",style="Header.Label",font=('Arial', 20, 'bold')).grid(row=1)
+
+        WiFi_name = tk.Entry(popup)
+        WiFi_pass = tk.Entry(popup, show="*")
+
+        WiFi_name.grid(row=0, column=1)
+        WiFi_pass.grid(row=1, column=1)
+
+        okButton = ttk.Button(popup, text="Apply", command=lambda: sequence(self.sendWiFiOpt(WiFi_name.get(),WiFi_pass.get()),popup.destroy())) 
+        okButton.grid(row=2, column=0,columnspan=2, sticky='nswe', pady=10)
+    
+    def sendWiFiOpt(self, ssid, passw):
+        data={}
+        data["OPTION"]="WifiConfig"
+        data["ssid"]=ssid
+        data["password"]=passw
+        self.send(data)
+        print(data)
+        
 app = Main(root)
 root.geometry("1500x720")
 root["bg"] = def_color

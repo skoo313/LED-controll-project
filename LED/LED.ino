@@ -6,19 +6,19 @@
 #include <string>
 #include <vector>
 
-#define PIN        14 
+#define PIN        14
 #define NUMPIXELS_MAX 80
 
 Adafruit_NeoPixel pixels(NUMPIXELS_MAX, PIN, NEO_RGB + NEO_KHZ800);
 
 class Segment
-{   
+{
     //zmienne liczby ledów, jasności i opóźnienia
     unsigned short num, br , del;
-    
+
     //indeks aktualnie ustawiuanego pixela
-    short loop_index = 0; 
-    
+    short loop_index = 0;
+
     //kolory rgb oraz indeksy kazdedo pixela w segmencie
     std::vector<short> r, g, b, index;
 
@@ -26,19 +26,19 @@ class Segment
     unsigned long currentMillis, startMillis;
 
   public:
-  
+
     Segment(int n, int d = 0,  int b = 0)
     {
       num = n;
       br = b;
       del = d;
-      
+
       startMillis = millis();
     }
 
     void clearPixels() //czyści dane pixeli
-    { 
-      
+    {
+
       r.clear();
       g.clear();
       b.clear();
@@ -46,16 +46,16 @@ class Segment
     }
 
     void addPixel(int red, int green, int blue, int i) //funkcja dodająca wartości koloru i indeks
-    { 
-      
+    {
+
       r.push_back(red);
       g.push_back(green);
       b.push_back(blue);
       index.push_back(i);
     }
 
-    void ledMain()  //funkcja obsługująca 
-    { 
+    void ledMain()  //funkcja obsługująca
+    {
 
       if (br) //ustawia jasnosc
         pixels.setBrightness(br);
@@ -66,7 +66,7 @@ class Segment
       {
         //"reset" czasu
         startMillis = currentMillis;
-        
+
         pixels.setPixelColor(index[loop_index], b[loop_index], r[loop_index], g[loop_index]);
 
         if (del > 0)
@@ -96,16 +96,20 @@ WiFiServer server(port);
 WiFiClient client;
 WiFiClient newClient;
 
+//dane serwera udostepnianego jesni nie ma sieci do polaczenia 
+IPAddress local_IP(192, 168, 4, 22);
+IPAddress gateway(192, 168, 4, 9);
+IPAddress subnet(255, 255, 255, 0);
 class MainManager
 {
     //Server connect to WiFi Network
-    const char *ssid = "UPC3289504";  // wifi SSID
-    const char *password = "CzsG2tbkj4uc";  // wifi Password
+    String ssid = ""; 
+    String password = ""; 
 
     //kontener dla wszystkich segmentów
     std::vector <Segment> allData;
 
-    //zmienna na dane otrzymane z aplikacji 
+    //zmienna na dane otrzymane z aplikacji
     String req = "";
     //plik tekstowy z ostatnimi ustawieniami
     const char* filename = "/samplefile.txt";
@@ -114,7 +118,7 @@ class MainManager
     MainManager() {};
   public:
     static MainManager& getInstance() //zwraca jedyną instancję (singleton)
-    { 
+    {
       static MainManager instance; // Guaranteed to be destroyed.
       return instance;
     }
@@ -142,7 +146,7 @@ class MainManager
 
           //jesli dane zaladowane chcemy je odczytac
           readData();
-          pixels.clear();
+
         }
 
         client.flush();
@@ -156,7 +160,7 @@ class MainManager
       Serial.println("LOAD_DATA - stop");
     }
 
-    boolean checkForTask() //funkcja sprawdzajaca czy nawiazane zostalo polaczenie 
+    boolean checkForTask() //funkcja sprawdzajaca czy nawiazane zostalo polaczenie
     {
       newClient = server.available();
       if (newClient) {
@@ -165,7 +169,7 @@ class MainManager
       }
       return false;
     }
-    
+
     bool readData()
     {
       //JSON----------------------------------------
@@ -186,48 +190,63 @@ class MainManager
       }
       else
       {
-        //zapisuje polecenie do pliku
-        saveToFile();
-
-        //czysci dane wszystkich segmentow
-        for ( size_t i = 0; i < allData.size(); i++ )
-          allData[i].clearPixels();
-        //czysci segmenty
-        allData.clear();
-
-        //zmienna przechowujaca liczbe zdefiniowanych ledow
-        int definedLEDs = 0;
-        
-        //odczytuje dane z jsona
-        for (int i = 0; i < jObj["SegNum"]; i++)
+        //2 opcje - albo dostaje dane ledow albo siec i haslo do wifi
+        if (jObj["OPTION"] == "WifiConfig")
         {
-          //tworzy segment i ,,wklada" go do kontenera
-          Segment tmp(jObj["S" + String(i)]["n"], jObj["S" + String(i)]["d"], jObj["S" + String(i)]["br"]);
-          allData.push_back(tmp);
-          
-          definedLEDs += int(jObj["S" + String(i)]["n"]);
-          
-          //odczytuje dane pixeli
-          for (int j = 0; j < jObj["S" + String(i)]["n"]; j++)
+          Serial.println("New Wifi data request");
+
+          ssid = jObj["ssid"].as<String>();
+          password = jObj["password"].as<String>();
+          saveToFile("/WiFi_Data.txt");
+          Serial.println("readDataFun()");
+          Serial.println(ssid);
+          Serial.println(password);
+          connectToWifi();
+        }
+        else
+        {
+          //zapisuje polecenie do pliku
+          saveToFile("/samplefile.txt");
+
+          //czysci dane wszystkich segmentow
+          for ( size_t i = 0; i < allData.size(); i++ )
+            allData[i].clearPixels();
+          //czysci segmenty
+          allData.clear();
+
+          //zmienna przechowujaca liczbe zdefiniowanych ledow
+          int definedLEDs = 0;
+
+          //odczytuje dane z jsona
+          for (int i = 0; i < jObj["SegNum"]; i++)
           {
-            //sprawdza czy indeksy sa zdefiniowane - jesli nie ustawia je automatycznie (po kolei)
-            if (jObj["indexing"] == "normal")
-              allData[i].addPixel(int(jObj["S" + String(i)]["L" + String(j)]["r"]), int(jObj["S" + String(i)]["L" + String(j)]["g"]), int(jObj["S" + String(i)]["L" + String(j)]["b"]), j);
-            else if (jObj["indexing"] == "specified")
-              allData[i].addPixel(int(jObj["S" + String(i)]["L" + String(j)]["r"]), int(jObj["S" + String(i)]["L" + String(j)]["g"]), int(jObj["S" + String(i)]["L" + String(j)]["b"]), int(jObj["S" + String(i)]["L" + String(j)]["i"]));
+            //tworzy segment i ,,wklada" go do kontenera
+            Segment tmp(jObj["S" + String(i)]["n"], jObj["S" + String(i)]["d"], jObj["S" + String(i)]["br"]);
+            allData.push_back(tmp);
+
+            definedLEDs += int(jObj["S" + String(i)]["n"]);
+
+            //odczytuje dane pixeli
+            for (int j = 0; j < jObj["S" + String(i)]["n"]; j++)
+            {
+              //sprawdza czy indeksy sa zdefiniowane - jesli nie ustawia je automatycznie (po kolei)
+              if (jObj["indexing"] == "normal")
+                allData[i].addPixel(int(jObj["S" + String(i)]["L" + String(j)]["r"]), int(jObj["S" + String(i)]["L" + String(j)]["g"]), int(jObj["S" + String(i)]["L" + String(j)]["b"]), j);
+              else if (jObj["indexing"] == "specified")
+                allData[i].addPixel(int(jObj["S" + String(i)]["L" + String(j)]["r"]), int(jObj["S" + String(i)]["L" + String(j)]["g"]), int(jObj["S" + String(i)]["L" + String(j)]["b"]), int(jObj["S" + String(i)]["L" + String(j)]["i"]));
+            }
+
           }
 
+          //jesli nie zdefiniowano wszystkich dostępnych pixeli - ustawia resztę na wyłączone
+          if (definedLEDs < NUMPIXELS_MAX)
+            for (int x = definedLEDs; x < NUMPIXELS_MAX; x++)
+              pixels.setPixelColor(x, 0, 0, 0);
         }
-
-        //jesli nie zdefiniowano wszystkich dostępnych pixeli - ustawia resztę na wyłączone
-        if (definedLEDs < NUMPIXELS_MAX)
-          for (int x = definedLEDs; x < NUMPIXELS_MAX; x++)
-            pixels.setPixelColor(x, 0, 0, 0);
       }
-
     }
 
-    void readFile() //funkcja odczytujaca dane z pliku i przetwarzająca je jeśli istnieją
+    void readFile(String filename) //funkcja odczytujaca dane z pliku i przetwarzająca je jeśli istnieją
     {
       //Read File data - check if in file is last used configuration
       File f = SPIFFS.open(filename, "r");
@@ -249,8 +268,8 @@ class MainManager
         readData();
       }
     }
-    
-    void saveToFile()
+
+    void saveToFile(String filename)
     { //zapisuje poprawne dane do pliku
       File f = SPIFFS.open(filename, "w");
 
@@ -271,36 +290,61 @@ class MainManager
       for ( size_t i = 0; i < allData.size(); i++ )
         allData[i].ledMain();
     }
-    
+
     void connectToWifi() //funkcja odpowiedzialna za polaczenie z wifi
     {
-      WiFi.mode(WIFI_STA);
-      WiFi.begin(ssid, password); //Connect to wifi
-
-      client.flush();
-      client.stop();
-      newClient.flush();
-      newClient.stop();
-
-      // Wait for connection
-      Serial.println("Connecting to Wifi");
-
-      while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-        delay(500);
-      }
-      //drukowanie informacji o polaczeniu
-      Serial.println("");
-      Serial.print("Connected to ");
+      server.stop();
+      server.close();
+      Serial.println("_________connectToWifi()");
       Serial.println(ssid);
-      Serial.print("IP: ");
-      Serial.println(WiFi.localIP());
-      server.begin();
-      Serial.print("Connect to:");
-      Serial.print(WiFi.localIP());
-      Serial.print(":");
-      Serial.println(port);
+      Serial.println(password);
+
+      //jesli nie ma sieci do ktorej ma sie polaczyc tworzy swoja
+      if (ssid == "")
+      {
+        Serial.print("Setting soft-AP configuration ... ");
+        Serial.println(WiFi.softAPConfig(local_IP, gateway, subnet) ? "Ready" : "Failed!");
+
+        Serial.print("Setting soft-AP ... ");
+        Serial.println(WiFi.softAP("ESPsoftAP_01") ? "Ready" : "Failed!");
+
+        Serial.print("Soft-AP IP address = ");
+        Serial.println(WiFi.softAPIP());
+
+        server.begin();
+
+      }
+      else
+      {
+
+        WiFi.mode(WIFI_STA);
+        WiFi.begin(ssid, password); //Connect to wifi
+
+        client.flush();
+        client.stop();
+        newClient.flush();
+        newClient.stop();
+
+        // Wait for connection
+        Serial.println("Connecting to Wifi");
+
+        while (WiFi.status() != WL_CONNECTED) {
+          delay(500);
+          Serial.print(".");
+          delay(500);
+        }
+        //drukowanie informacji o polaczeniu
+        Serial.println("");
+        Serial.print("Connected to ");
+        Serial.println(ssid);
+        Serial.print("IP: ");
+        Serial.println(WiFi.localIP());
+        server.begin();
+        Serial.print("Connect to:");
+        Serial.print(WiFi.localIP());
+        Serial.print(":");
+        Serial.println(port);
+      }
     }
 
 };
@@ -317,7 +361,7 @@ void setup()
 
   Serial.println();
 
-  manager.connectToWifi();
+
 
   // polaczone -> dioda gasnie
   digitalWrite(LED_BUILTIN, HIGH);
@@ -335,7 +379,11 @@ void setup()
   else
     Serial.println("..... FAILED!");
 
-  manager.readFile();
+  manager.readFile("/WiFi_Data.txt");
+  manager.readFile("/samplefile.txt");
+
+
+  manager.connectToWifi();
   Serial.println("Kończę setup");
 }
 
@@ -351,6 +399,7 @@ void loop()
     //ustawia klienta i odbiera dane
     client = newClient;
     manager.loadData();
+    pixels.clear();
   }
 
   //funkcja obsługująca ledy
