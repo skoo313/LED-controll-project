@@ -12,15 +12,8 @@ void setup()
 
   Serial.println();
 
-
-
   // polaczone -> dioda gasnie
   digitalWrite(LED_BUILTIN, HIGH);
-
-
-
-
-  
 
   Serial.print("Konfiguruję file sys:");
   if (SPIFFS.begin())
@@ -35,8 +28,6 @@ void setup()
   manager.connectToWifi();
   Serial.println("Kończę setup");
 }
-
-
 
 void loop()
 {

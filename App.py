@@ -14,7 +14,7 @@ from colorsys import rgb_to_hls, hls_to_rgb
 from colour import Color
 from tkinter import *
 from time import strftime
-
+import threading
 
 from netaddr import IPNetwork, IPAddress
 
@@ -95,11 +95,16 @@ class Main():
 
         self.show_frame(MainPage)
 
-    def show_frame(self, pointer):
+    def show_frame(self, pointer, arg=None):
         """ Funkcja wywołująca odpowiednią klasę w ramce (Frame) """
+
+        print("xd=====")
+        print(arg)
         frame = self.frames[pointer]
         frame.tkraise()
-
+        
+        if arg:
+            frame.some_function(arg)
 
 class MainPage(tk.Frame):
     """ Klasa będąca stroną startową aplikacji """
@@ -332,22 +337,27 @@ class ColorMain(tk.Frame):
             HOST =  "192.168.4.22"
         print(HOST)
 
-
-
         # Create a socket (SOCK_STREAM means a TCP socket)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
+        result=""
         try:
             # Connect to server and send data
             sock.connect((HOST, PORT))
 
             time.sleep(.5)
             sock.sendall(bytes(finalData, encoding="utf-8"))
+            
+            data = sock.recv(1024)
+            if data:
+                data=data.decode("utf-8")
+                print("Received message: " + data)
+                result=data
             # Receive data from the server and shut down
 
-            # print("Received message: " + received)
+            
         finally:
             sock.close()
+            return result
 
     def navigationButtons(self, controller):
         self.main_controllFrame = Frame(self, bg=def_color)
@@ -371,7 +381,7 @@ class ColorMain(tk.Frame):
 class OneColorPage(ColorMain):
     """ Klasa z widokiem umożliwiającym ustawienia jednolicie świecących ledów """
 
-    def __init__(self, parent, controller):
+    def __init__(self, parent, controller, args=[] ):
         tk.Frame.__init__(self, parent, bg=def_color)
 
         # ustawia odpowiednie szerokosci i wysokości kolumn i rzędów w układzie elementów
@@ -457,7 +467,8 @@ class OneColorPage(ColorMain):
             self.save(LED)
         print("Done")
 
-
+    def some_function(self,a):
+        print(a)
 
 class GradientColorPage(ColorMain):
     """ Klasa z widokiem umożliwiającym ustawienia gradientu ledów """
@@ -946,7 +957,7 @@ class GradientFrame(tk.Canvas):
             self.create_line(i, 0, i, height, tags=("gradient",), fill=color)
         self.lower("gradient")
 
-class OtherOptPage(tk.Frame):
+class OtherOptPage(ColorMain):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent, bg=def_color)
         # ustawia odpowiednie szerokosci i wysokości kolumn i rzędów w układzie elementów
@@ -957,7 +968,8 @@ class OtherOptPage(tk.Frame):
         self.rowconfigure(0, weight=1)
         self.rowconfigure(1, weight=1)
         self.rowconfigure(2, weight=1)
-        self.rowconfigure(3, weight=5)
+        self.rowconfigure(3, weight=1)
+        self.rowconfigure(4, weight=4)
         self.main_controllFrame = Frame(self, bg=def_color2)
         self.main_controllFrame.grid(column=0, columnspan=4, row=0, sticky="nsew")
 
@@ -980,8 +992,19 @@ class OtherOptPage(tk.Frame):
 
         configTimer = ttk.Button(self, style='TButton',text="Configure Timer", command=lambda: self.TimerSettings())
         configTimer.grid(row=2, column=0,columnspan=4, sticky='nswe', padx=10, pady=20)
+        
+        configSaved = ttk.Button(self, style='TButton',text="Configure Saved", command=lambda: self.SavedOptionsSettings(controller))
+        configSaved.grid(row=3, column=0,columnspan=4, sticky='nswe', padx=10, pady=20)
 
-    def WiFiSettings(self):   
+    def WiFiSettings(self):
+        def sendWiFiOpt(ssid, passw):
+            data={}
+            data["OPTION"]="WifiConfig"
+            data["ssid"]=ssid
+            data["password"]=passw
+            self.send(data)
+            print(data)   
+        
         popup = Toplevel()
         popup.grab_set()
         popup.title('WiFi Settings') 
@@ -999,32 +1022,144 @@ class OtherOptPage(tk.Frame):
         WiFi_name.grid(row=0, column=1)
         WiFi_pass.grid(row=1, column=1)
 
-        okButton = ttk.Button(popup, text="Apply", command=lambda: sequence(self.sendWiFiOpt(WiFi_name.get(),WiFi_pass.get()),popup.destroy())) 
+        okButton = ttk.Button(popup, text="Apply", command=lambda: sequence(sendWiFiOpt(WiFi_name.get(),WiFi_pass.get()),popup.destroy())) 
         okButton.grid(row=2, column=0,columnspan=2, sticky='nswe', pady=10)
-    
-    def sendWiFiOpt(self, ssid, passw):
-        data={}
-        data["OPTION"]="WifiConfig"
-        data["ssid"]=ssid
-        data["password"]=passw
-        self.send(data)
-        print(data)
+     
+    def TimerSettings(self):
+        def OneSecClock():
+	        string = strftime('%H:%M:%S %p') 
+	        self.lbl.config(text = string) 
+	        self.lbl.after(1000, OneSecClock) 
+
+        def loadData():
+            print("loadData")
+            req={}
+            req["OPTION"]="Load"
+            req["dir"]="SavedOptions"
+            saved= self.send(req)
+
+
+            saved = saved.split(";") #dzieli na pliki
+            saved[:] = [x[:-4] for x in saved if x] #usuwa puste i koncówkę .txt z pozostałych
+
+            print(saved)
+            self.OPTIONS = []
+
+            for s in saved:
+                self.OPTIONS.append(s)
+
+            self.optionChooser.set(self.OPTIONS[0])
+            self.colorModeChooser = OptionMenu(self.rightFr, self.optionChooser, *self.OPTIONS)
+            self.colorModeChooser.config(font=('Arial', 10), foreground='#A8A8A8',background="#353535")
+            self.colorModeChooser.config(width=20)
+            self.colorModeChooser.grid(row=3, column=1, sticky="ew")
+
+        def right():
+            xxx=str(self.lbl.cget("text"))
+            xxx = xxx.split(':')
+            self.hourstr=tk.StringVar(self.rightFr,xxx[0])
+
+            self.hour = Spinbox(self.rightFr,from_=0,to=23,width=0,justify=CENTER,font=('Arial', 20, 'bold'), foreground='#A8A8A8', background="#353535", textvariable=self.hourstr)
+            self.hour.grid(row=0,column=0, sticky="ew")
+
+            self.minstr=tk.StringVar(self.rightFr,xxx[1])
+            self.minstr.trace("w",trace_var)
+            self.last_value = ""
+            self.min = Spinbox(self.rightFr,from_=0,to=59,width=0,justify=CENTER,font=('Arial', 20, 'bold'), foreground='#A8A8A8', background="#353535", textvariable=self.minstr)
+
+            self.min.grid(row=0,column=1, sticky="ew")
+
+            offButton = ttk.Button(self.rightFr, text="Turn on", width=0, command=lambda: sequence(add_item("ON"))) 
+            offButton.grid(row=1, column=0, sticky='we')
+
+            onButton = ttk.Button(self.rightFr, text="Turn off",width=0, command=lambda: sequence(add_item("OFF"))) 
+            onButton.grid(row=1, column=1,sticky='we')
+
+            a = ttk.Label(self.rightFr, style="Header.Label",anchor = 'center', text="Choose defined:",font=('Arial', 20, 'bold'),background = def_color) 
+            a.grid(row=3, column=0, sticky="news")
+             
+            useButton = ttk.Button(self.rightFr, text="Use", width=0, command=lambda: sequence(add_item(self.optionChooser.get()))) 
+            useButton.grid(row=2, column=0, sticky='we')
+
+            def runAsThread():
+                x = threading.Thread(target=loadData, args=())
+                x.start()
+                print("x started")
+
+            loadButton = ttk.Button(self.rightFr, text="Load",width=0, command=lambda: runAsThread()) 
+            loadButton.grid(row=2, column=1,sticky='we')
+
+            
+
+            self.OPTIONS = [
+            "No data"
+            ]  # etc
+            
+            self.optionChooser = StringVar(self.rightFr)
+            self.optionChooser.set(self.OPTIONS[0])  # default value
+
+            self.colorModeChooser = OptionMenu(self.rightFr, self.optionChooser, *self.OPTIONS)
+            self.colorModeChooser.config(font=('Arial', 10), foreground='#A8A8A8',background="#353535")
+            self.colorModeChooser.config(width=20)
+
+            self.colorModeChooser.grid(row=3, column=1, sticky="ew")
+
+            deleteButton = ttk.Button(self.rightFr, text="Delete action", command=lambda: print(remove_item())) 
+            deleteButton.grid(row=4, column=0,columnspan=2, sticky='we', pady=10)
         
-    def TimerSettings(self):   
+        def left():
+                
+            self.tree = Treeview(self.leftFr, selectmode="extended",columns=("Time", "Action"))
+            self.tree.grid(row=0, column=0,sticky="news")
+
+            self.tree.column("#0", minwidth=0, width=0, stretch=NO)
+
+            self.tree.heading("Time", text="Time")
+            self.tree.column("Time", minwidth=40, width=40, stretch=NO)
+
+            self.tree.heading("Action", text="Action")
+            self.tree.column("Action", minwidth=15, width=10, stretch=YES)
+
+
+            # load from ?
+            self.tree.insert('', 'end', text='',values=["15:31", "ON"], tags=['red_fg'])
+            self.tree.insert('', 'end', text='',values=["21:58", "OFF" ],tags=['red_fg'])
+
+        def add_item(mode):
+            
+            if mode != "No data":
+                time=self.hourstr.get()+":"+self.minstr.get()
+                self.tree.insert('', 'end', text='',values=[time, mode], tags=['red_fg'])
+
+        def remove_item():
+            selected_items = self.tree.selection() 
+
+            curItem = self.tree.focus()
+            print(self.tree.item(curItem)["values"])
+
+            for selected_item in selected_items:          
+               self.tree.delete(selected_item)
+
+        def trace_var(*args):
+            if self.last_value == "59" and self.minstr.get() == "0":
+                self.hourstr.set(int(self.hourstr.get())+1 if self.hourstr.get() !="23" else 0)
+            self.last_value = self.minstr.get()
+
+
         popup = Toplevel()
         popup.grab_set()
         popup.title('Timer Settings') 
         popup["bg"] = def_color
         popup.geometry("600x600")
         popup.rowconfigure(1,weight=1)
-        popup.columnconfigure(0,weight=1)
+        popup.columnconfigure(0,weight=5)
         popup.columnconfigure(1,weight=1)
 
 
         self.lbl = ttk.Label(popup, style="Header.Label",anchor = 'center', background = def_color2) 
         self.lbl.grid(row=0, column=0, columnspan=4, sticky="news")
         
-        self.timeX()
+        OneSecClock()
         self.leftFr = Frame(popup, bg="red")
         self.leftFr.grid(column=0, row=1, sticky="nsew", padx=5)
 
@@ -1033,7 +1168,7 @@ class OtherOptPage(tk.Frame):
         self.leftFr.rowconfigure(0, weight=1)
 
         self.rightFr = Frame(popup, bg=def_color)
-        self.rightFr.grid(column=1,  row=1, sticky="nsew", padx=5)
+        self.rightFr.grid(column=1,  row=1, sticky="nsew")
 
         # ustawia odpowiednie szerokosci i wysokości kolumn i rzędów w układzie elementów
         self.rightFr.columnconfigure(0, weight=1)
@@ -1042,78 +1177,69 @@ class OtherOptPage(tk.Frame):
         self.rightFr.rowconfigure(0, weight=1)
         self.rightFr.rowconfigure(1, weight=1)
         self.rightFr.rowconfigure(2, weight=1)
+        self.rightFr.rowconfigure(3, weight=1)
+        self.rightFr.rowconfigure(4, weight=1)
 
         okButton = ttk.Button(popup, text="Apply", command=lambda: sequence(popup.destroy())) 
         okButton.grid(row=2, column=0,columnspan=4, sticky='nswe', pady=10)
 
-        self.right()
-        self.left()
+        right()
+        left()
 
-    def right(self):
-        xxx=str(self.lbl.cget("text"))
-        xxx = xxx.split(':')
-        self.hourstr=tk.StringVar(self.rightFr,xxx[0])
+    def SavedOptionsSettings(self,controller):
+        popup = Toplevel()
+        popup.grab_set()
+        popup.title('Timer Settings') 
+        popup["bg"] = def_color
+        popup.geometry("600x600")
+        popup.rowconfigure(0,weight=1)
+        popup.rowconfigure(1,weight=1)
+        popup.rowconfigure(2,weight=1)
+        popup.rowconfigure(3,weight=1)
+        popup.rowconfigure(4,weight=1)
+        popup.rowconfigure(5,weight=1)
+        popup.columnconfigure(0,weight=1)
+        popup.columnconfigure(1,weight=1)
+        popup.columnconfigure(2,weight=1)
+
+        self.navFrame = Frame(popup)
+        self.navFrame.grid(column=0, columnspan=3, row=0)
+
+        # ustawia odpowiednie szerokosci i wysokości kolumn i rzędów w układzie elementów
+        self.navFrame.columnconfigure(0, weight=1)
+        self.navFrame.columnconfigure(1, weight=1)
+        self.navFrame.columnconfigure(2, weight=1)
+        self.navFrame.rowconfigure(3, weight=1)
+
         
-        self.hour = Spinbox(self.rightFr,from_=0,to=23,width=0,justify=CENTER,font=('Arial', 20, 'bold'), foreground='#A8A8A8', background="#353535", textvariable=self.hourstr)
-        self.hour.grid(row=0,column=0, sticky="nsew")
 
-        self.minstr=tk.StringVar(self.rightFr,xxx[1])
-        self.minstr.trace("w",self.trace_var)
-        self.last_value = ""
-        self.min = Spinbox(self.rightFr,from_=0,to=59,width=0,justify=CENTER,font=('Arial', 20, 'bold'), foreground='#A8A8A8', background="#353535", textvariable=self.minstr)
-        
-        self.min.grid(row=0,column=1, sticky="nsew")
 
-        offButton = ttk.Button(self.rightFr, text="Turn on", width=0, command=lambda: sequence(self.add_item("ON"))) 
-        offButton.grid(row=1, column=0, sticky='nswe')
-
-        onButton = ttk.Button(self.rightFr, text="Turn off",width=0, command=lambda: sequence(self.add_item("OFF"))) 
-        onButton.grid(row=1, column=1,sticky='nswe')
-
-        deleteButton = ttk.Button(self.rightFr, text="Delete action", command=lambda: print( self.remove_item())) 
-        deleteButton.grid(row=3, column=0,columnspan=2, sticky='nswe', pady=10)
-    
-    def left(self):
-                
-
-        self.tree = Treeview(self.leftFr, selectmode="extended",columns=("Time", "Action"))
-        self.tree.grid(row=0, column=0,sticky="news")
-        
+        self.tree = Treeview(popup, selectmode="extended",columns=("Action"))
+        self.tree.grid(row=1,rowspan=5, column=0, columnspan=2, sticky="news")
         self.tree.column("#0", minwidth=0, width=0, stretch=NO)
 
-        self.tree.heading("Time", text="Time")
-        self.tree.column("Time", minwidth=1, width=10, stretch=YES)
-
-        self.tree.heading("Action", text="Action")
-        self.tree.column("Action", minwidth=1, width=10, stretch=YES)
-
-
+        self.tree.heading("Action", text="Saved option name")
+        self.tree.column("Action", minwidth=15, width=10, stretch=YES)
         # load from ?
-        self.tree.insert('', 'end', text='',values=["15:31", "ON"], tags=['red_fg'])
-        self.tree.insert('', 'end', text='',values=["21:58", "OFF" ],tags=['red_fg'])
+        self.tree.insert('', 'end', text='',values=["ON"], tags=['red_fg'])
+        self.tree.insert('', 'end', text='',values=["OFF" ],tags=['red_fg'])
 
-    def add_item(self, mode):
 
-        time=self.hourstr.get()+":"+self.minstr.get()
-
-        self.tree.insert('', 'end', text='',values=[time, mode], tags=['red_fg'])
-
-    def remove_item(self):
-        selected_items = self.tree.selection()        
-        for selected_item in selected_items:          
-           self.tree.delete(selected_item)
-
-    def trace_var(self,*args):
-        if self.last_value == "59" and self.minstr.get() == "0":
-            self.hourstr.set(int(self.hourstr.get())+1 if self.hourstr.get() !="23" else 0)
-        self.last_value = self.minstr.get()
-    
-    def timeX(self):
+        applyButton = ttk.Button(popup, text="Apply",command=lambda: popup.destroy())
+        applyButton.grid(row=1, column=2, sticky='we',padx=10, pady=10)
         
-	    string = strftime('%H:%M:%S %p') 
-	    self.lbl.config(text = string) 
-	    self.lbl.after(1000, self.timeX)
+        loadButton = ttk.Button(popup, text="Load",command=lambda: popup.destroy())
+        loadButton.grid(row=2, column=2, sticky='we',padx=10, pady=10)
+        
+        deleteButton = ttk.Button(popup, text="Delete",command=lambda: popup.destroy())
+        deleteButton.grid(row=3, column=2, sticky='we',padx=10, pady=10)
 
+        editButton = ttk.Button(popup, text="Edit",command=lambda: sequence(controller.show_frame(OneColorPage,"XSDASDFAS"), popup.destroy()))
+        editButton.grid(row=4, column=2, sticky='we',padx=10, pady=10)
+
+        backButton = ttk.Button(popup, text="Back",command=lambda: popup.destroy())
+        backButton.grid(row=5, column=2, sticky='we',padx=10, pady=10)
+        
 app = Main(root)
 root.geometry("1500x720")
 root["bg"] = def_color
