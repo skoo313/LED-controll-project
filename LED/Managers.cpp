@@ -16,9 +16,7 @@ void MainManager::configure()
   pixels.begin(); // INITIALIZE NeoPixel strip object
   Serial.println("..... OK");
 
-
   Serial.print("Konfiguruję kartę SD...");
-
   if (!SD.begin(4))
     Serial.print("initialization failed!");
   else
@@ -45,13 +43,20 @@ void  MainManager::loadData()
       //jesli dane zaladowane chcemy je odczytac
       readData();
     }
+
+    disconnectClient();
+    
+    Serial.println("Client disconnected");
+  }
+  Serial.println("LOAD_DATA - stop");
+}
+
+void MainManager::disconnectClient()
+{
     client.flush();
     client.stop();
     newClient.flush();
     newClient.stop();
-    Serial.println("Client disconnected");
-  }
-  Serial.println("LOAD_DATA - stop");
 }
 
 boolean  MainManager::checkForTask() //funkcja sprawdzajaca czy nawiazane zostalo polaczenie
@@ -107,6 +112,17 @@ bool  MainManager::readData(bool newData)
       if (!jObj["apply"])
         return 1;
       newData = true;
+    }
+    else if(jObj["OPTION"] == "Load")
+    {
+
+      
+      myFile = SD.open("/"+jObj["dir"].as<String>());
+      
+
+      client.println(printDirectory(myFile));
+      disconnectClient();
+      return 1;
     }
 
     //zapisuje polecenie do pliku
@@ -192,12 +208,39 @@ void  MainManager::saveToFile(String filename)
     myFile.println(req);
     // close the file:
     myFile.close();
-    Serial.println("done.");
+    Serial.println(" done.");
   } else {
     // if the file didn't open, print an error:
     Serial.println("error opening test.txt");
   }
 }
+
+String MainManager::printDirectory(File dir) 
+{
+  String result="";
+  
+  while (true) 
+  {
+
+    File entry =  dir.openNextFile();
+
+    // no more files
+    if (! entry)
+      break;
+      
+    result+=String(entry.name())+";";
+    Serial.println(entry.name());
+    String dataInside="";
+    while (entry.available()) {
+      dataInside = entry.readStringUntil('\n');
+    }
+    Serial.println(dataInside);
+    entry.close();
+  }
+
+  return result;
+}
+
 void  MainManager::runLeds() //funkcja wywolujaca glowna funkcje ledow dla kazdego segmentu
 {
   for ( size_t i = 0; i < allData.size(); i++ )

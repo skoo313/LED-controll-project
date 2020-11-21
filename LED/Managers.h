@@ -42,9 +42,13 @@ class MainManager
 
     void saveToFile(String filename);
 
+    String printDirectory(File dir);
+    
     void runLeds(); //funkcja wywolujaca glowna funkcje ledow dla kazdego segmentu
   
     void connectToWifi() ;//funkcja odpowiedzialna za polaczenie z wifi
+
+    void disconnectClient();
     
     void mloop(); //główna pętla managera- sprawdza czy sa nowe polecenia
     
