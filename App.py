@@ -590,7 +590,7 @@ class GradientColorPage(ColorMain):
         
         for i in range(len(colors)):
             c = colors[i]
-            # DO POPRAWIENIA!
+            
             if(str(c)[0] is not '#'):
                 print(c)
                 f = open("error_colors2.txt", "a")
@@ -669,7 +669,7 @@ class SegmentColorPage(ColorMain):
         self.timelinesMembers = [[0]]
 
         self.timelinedelay=[0.0]
-        self.repeat=[1]
+        self.reverse=[0]
         self.wait=[0.0]
 
         # indeks aktualnie edytowanego elementu
@@ -709,7 +709,7 @@ class SegmentColorPage(ColorMain):
         self.load_segment_opt()
         #-------------------------
          # ----- ramka opcji segmentu -----
-        self.segmentOptFrame = Frame(self, bg="red")
+        self.segmentOptFrame = Frame(self, bg=def_color)
         self.segmentOptFrame.grid(column=2, columnspan=2, row=3, sticky="news")
         self.segmentOptFrame .columnconfigure(0, weight=1)
         self.segmentOptFrame .columnconfigure(1, weight=1)
@@ -755,9 +755,9 @@ class SegmentColorPage(ColorMain):
         self.timeLineChooser= OptionMenu(self.segmentOptFrame, self.timeLineVar, *self.timelines, command=self.addToTimeLine)
         self.timeLineChooser.config(font=('Arial', 10), foreground='#A8A8A8',background="#353535")
         self.timeLineChooser.grid(row=2, column=1, sticky="nesw", pady=10)
-        ttk.Button(self.segmentOptFrame, style='TButton', text="Add time line", command=lambda: self.addTimeline()).grid(row=2, column=0, pady=10)
+        ttk.Button(self.segmentOptFrame, style='TButton', text="Add time line", command=lambda: self.addTimeline()).grid(row=2, column=0)
         
-        ttk.Label(self.segmentOptFrame, style="Header.Label", text="Delay [s]:", font=LARGE_FONT).grid(row=3, column=0, padx=10, pady=10)
+        ttk.Label(self.segmentOptFrame, style="Header.Label", text="Delay [s]:", font=LARGE_FONT).grid(row=3, column=0, padx=10, pady=1)
         self.delNum = StringVar(self.segmentOptFrame)
         self.delNum.set("0.00")
         self.delayNum = Spinbox(self.segmentOptFrame,command=lambda: self.delayChange(),textvariable=self.delNum, foreground='#A8A8A8', background="#353535", font=('Arial', 15), from_=0, to=1, format="%.2f",increment=0.01, justify=CENTER)
@@ -770,30 +770,15 @@ class SegmentColorPage(ColorMain):
         self.delayStart = Spinbox(self.segmentOptFrame, foreground='#A8A8A8', background="#353535", font=('Arial', 15), from_=0, to=1, format="%.2f", textvariable=self.delStart,increment=0.01, justify=CENTER)
         self.delayStart.grid(row=4, column=1, pady=1)
         #-------------------------
-        ttk.Label(self.segmentOptFrame, style="Header.Label", text="Every:",font=LARGE_FONT).grid(row=2, column=2, pady=1,sticky="w")
-
-        self.repeatNum = StringVar(self.segmentOptFrame)
-        self.repeatNum.set("1")
-        self.repeatEvery = Spinbox(self.segmentOptFrame, from_=1, to=80, justify=CENTER, command=lambda: self.elementSizeChange(), font=('Arial', 15, 'bold'), foreground='#A8A8A8', background="#353535", textvariable=self.slen)
-        self.repeatEvery.grid(row=2, column=3, pady=1)
-        #------------------------- 
-        ttk.Separator(self.segmentOptFrame, orient=VERTICAL).grid(column=2,columnspan=2, row=1, rowspan=4, sticky='wns')
-        ttk.Separator(self.segmentOptFrame, orient=VERTICAL).grid(column=0,columnspan=4, row=0, sticky='wse')
-
-        self.repeat = IntVar(value=0)
-        tk.Checkbutton(self.segmentOptFrame, activebackground='red', foreground='red',background="#353535", font=('Arial', 15), text="Repeat", variable=self.repeat).grid(row=1, column=2,columnspan=2, sticky="news", padx=10, pady=10)
+        
+        self.reverseVar = IntVar(value=0)
+        tk.Checkbutton(self.segmentOptFrame, command=lambda: self.setReverse() ,activebackground='red', foreground='red',background="#353535", font=('Arial', 15), text="Reverse", variable=self.reverseVar).grid(row=5, column=0,columnspan=2, sticky="news", padx=10, pady=10)
 
         self.colorTmp.trace_add('write', lambda name, index, mode, c1=col1, c2=col2: self.changeColorCallback(c1, c2, self.active_index))
-        ttk.Separator(self.segmentOptFrame, orient=VERTICAL).grid(column=2,columnspan=2, row=2, sticky='wse')
 
-        self.reverse = IntVar(value=0)
-        tk.Checkbutton(self.segmentOptFrame, activebackground='red', foreground='red',background="#353535", font=('Arial', 15), text="Reverse", variable=self.reverse).grid(row=3, column=2,columnspan=2, sticky="news", padx=10, pady=10)
-
-        self.turnoff = IntVar(value=0)
-        tk.Checkbutton(self.segmentOptFrame, activebackground='red', foreground='red',background="#353535", font=('Arial', 15), text="Turn off", variable=self.turnoff).grid(row=4, column=2,columnspan=2, sticky="news", padx=10, pady=10)
-
-
+        
     def loadColorFrame(self):
+        ''' Podglad kolorow'''
         self.colorFrame = Frame(self, bg=def_color)
         self.colorFrame.grid(column=0, columnspan=4, row=1, sticky="nsew")
         self.colorFrame .columnconfigure(0, weight=1)
@@ -805,6 +790,7 @@ class SegmentColorPage(ColorMain):
         GradientFrame(self.colorFrame, ColorVar(value="black"), ColorVar(value="black")).grid(row=0, column=0, sticky="nesw")
 
     def addTimeline(self):
+        """ Funkcja dodaje linie czasu """
         num=int(len(self.timelines))+1
         self.timelines.append("        "+str(num)+"      ")
         self.timeLineChooser= OptionMenu(self.segmentOptFrame, self.timeLineVar, *self.timelines, command=self.addToTimeLine)
@@ -815,6 +801,7 @@ class SegmentColorPage(ColorMain):
         print(self.timelinesMembers)
             
     def addToTimeLine(self, tl_index):
+        """ Funkcja dodaje segment do odpowiedniej linii czasu """
         for i in range(len(self.timelinesMembers)):
             if self.active_index in self.timelinesMembers[i]: self.timelinesMembers[i].remove(self.active_index)
             
@@ -823,6 +810,7 @@ class SegmentColorPage(ColorMain):
         print(self.timelinesMembers)
 
     def definedPixels(self, index):
+        """ Funkcja zwraca poprawnie zdefiniowane sekwencje """
         num=0
         for i in range(index):
             num += self.colorsNum[i]
@@ -832,7 +820,7 @@ class SegmentColorPage(ColorMain):
         return num
 
     def load_segment_opt(self):
-
+        """ Funkcja dodająca/usuwająca segment """
         print("load_segment_opt")
         for widget in self.colorFrame.winfo_children():
             widget.destroy()
@@ -843,6 +831,7 @@ class SegmentColorPage(ColorMain):
             self.colorsTo.append(ColorVar(value='black'))
             self.edit.append(IntVar(value=0))
             self.colorsNum.append(1)
+            self.reverse.append(0)
             self.timelinesMembers[0].append(len(self.colorsNum)-1)
 
 
@@ -851,6 +840,7 @@ class SegmentColorPage(ColorMain):
             self.colorsFrom.pop()
             self.colorsTo.pop()
             self.edit.pop()
+            self.reverse.pop()
 
             for i in range(len(self.timelinesMembers)):
                 if len(self.colorsNum)-1 in self.timelinesMembers[i]: self.timelinesMembers[i].remove(len(self.colorsNum)-1)
@@ -860,6 +850,7 @@ class SegmentColorPage(ColorMain):
         self.draw()
     
     def draw(self):
+        """ Funkcja czysci i rysuje nowe podglady kolorow """ 
         print(int(self.segmentNum.get()))
 
         for i in range(int(self.segmentNum.get())):
@@ -872,13 +863,15 @@ class SegmentColorPage(ColorMain):
 
     def elementSizeChange(self):
         self.colorsNum[self.active_index] = int(self.el_NUM.get())
-        # self.repeat[self.active_index]= int(self.el_NUM.get())
 
     def delayChange(self):
         self.timelinedelay[self.active_index] = float(self.delayNum.get())
-        print(self.timelinedelay)
+    
+    def setReverse(self):
+        self.reverse[self.active_index]=self.reverseVar.get()    
 
     def set_as_editing(self, active):
+        """ Funkcja ustawia wartosci zmiennych segmentu ktory chcemy edytowac """
         for i in range(len(self.edit)):
             self.edit[i].set(0)
 
@@ -886,7 +879,7 @@ class SegmentColorPage(ColorMain):
 
         self.active_index = active
         self.slen.set(self.colorsNum[self.active_index])
-        
+        self.reverseVar.set(self.reverse[self.active_index])
         self.timeLineChooser
         
         for i in range(len(self.edit)):
@@ -908,23 +901,14 @@ class SegmentColorPage(ColorMain):
         # ustawia podgląd gradientu
         GradientFrame(self.colorFrame, self.colorsFrom[i], self.colorsTo[i], borderwidth=1, relief="sunken").grid(
             row=0, column=i, sticky="nesw")
-
+    
     def apply(self, use=True):
         """ Funkcja obliczająca kolory wchodzące w skład segmentu i przekazujące je dalej do wysłania. """
-        print("self.colorsNum: ",end="")
-        print(self.colorsNum)
 
-        print("self.segmentNum.get(): ",end="")
-        print(self.segmentNum.get())
         startIndex=[]
         for i in range(int(self.segmentNum.get())):
-            print("X:",end="")
-            print(i)
-            startIndex.append(self.definedPixels(i))
-        
-        print("Start index: ",end="")
-        print(startIndex)
 
+            startIndex.append(self.definedPixels(i))
 
         segments=0
         notEmptySeg=[]
@@ -934,8 +918,7 @@ class SegmentColorPage(ColorMain):
                 
                 segments+=1
                 notEmptySeg.append(self.timelinesMembers[i])
-        print("segNUM: "+ str(segments))
-        print(notEmptySeg)
+
 
         LED = {}
         LED["SegNum"] = segments
@@ -949,28 +932,43 @@ class SegmentColorPage(ColorMain):
                 print("notEmptySeg[seg]")
                 print(len(notEmptySeg[seg]))
                 num+=self.colorsNum[notEmptySeg[seg][el]]
+                print(num)
+                print()
                 colors = list(Color(self.colorsFrom[notEmptySeg[seg][el]].get()).range_to(Color(self.colorsTo[notEmptySeg[seg][el]].get()), self.colorsNum[notEmptySeg[seg][el]]))
+
                 
-                for i in range(len(colors)):
+                loopRange=range(len(colors))
+ 
+                for i in loopRange:
                     c = colors[i]
 
-                    # DO POPRAWIENIA!
-                    # if(len(str(c)) == 4 or str(c)[0] is not '#'):
-                       
-                    #     # print(c)
-                        
-                    #     f = open("error_colors.txt", "a")
-                    #     f.write(c)
-                    #     f.close()
-                    #     c = "#000000"
+                    if(str(c)[0] is not '#'):
+                        print(c)
+                        f = open("error_colors2.txt", "a")
+                        f.write(str(c))
+                        f.write("\n")
+                        f.close()
+
+                        c=error_colors(str(c))
+                
+                
+                    elif(len(str(c)) == 4):
+                        a=str(c)
+                        a= a[0]+2*a[1]+2*a[2]+2*a[3]
+                        c=a
+
+
                     col = hex_rgb(str(c))
                     m = {}
-                    print("startIndex[notEmptySeg[seg][el]]:  ",end="")
-                    print(startIndex[notEmptySeg[seg][el]])
-                    x=startIndex[notEmptySeg[seg][el]]
-                    print("WTF: "+str(x))
+                    
 
-                    m["i"]= x+i
+                    if(not self.reverse[notEmptySeg[seg][el]]):
+                        x=startIndex[notEmptySeg[seg][el]]
+                        x=x+i
+                    else:
+                        x=startIndex[notEmptySeg[seg][el]]+num-i
+
+                    m["i"]= x
                     m["r"] = str(col[0])
                     m["g"] = str(col[1])
                     m["b"] = str(col[2])
