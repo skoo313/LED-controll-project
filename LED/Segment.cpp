@@ -30,25 +30,41 @@ void Segment::addPixel(int red, int green, int blue, int i) //funkcja dodająca 
 
 void Segment::ledMain()  //funkcja obsługująca
 {
-  if (br) //ustawia jasnosc
-    pixels.setBrightness(br);
-  //sprawdza czy upłynął wymagamy czas nie blokując programu (millis zamiast delay)
-  currentMillis = millis();
-  if (currentMillis - startMillis >= del)
+  
+
+  if (!clearing)
   {
-    //"reset" czasu
-    startMillis = currentMillis;
-    pixels.setPixelColor(index[loop_index], b[loop_index], r[loop_index], g[loop_index]);
-    if (del > 0)
-      pixels.show();
+    if (br) //ustawia jasnosc
+      pixels.setBrightness(br);
+    //sprawdza czy upłynął wymagamy czas nie blokując programu (millis zamiast delay)
+    currentMillis = millis();
+    if (currentMillis - startMillis >= del)
+    {
+      //"reset" czasu
+      startMillis = currentMillis;
+      pixels.setPixelColor(index[loop_index], b[loop_index], r[loop_index], g[loop_index]);
+      if (del > 0)
+        pixels.show();
+      loop_index++;
+      if (loop_index  >= num )
+      {
+        loop_index = 0;
+        clearing = true;
+        if (del == 0)
+          pixels.show();
+      }
+
+
+    }
+  }
+  else
+  {
+    pixels.setPixelColor(index[loop_index], 0, 0, 0);
     loop_index++;
     if (loop_index  >= num )
     {
       loop_index = 0;
-      if (del == 0)
-        pixels.show();
+      clearing = false;
     }
-    if (loop_index == 0 && del != 0)
-      pixels.clear();
   }
 }

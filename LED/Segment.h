@@ -11,7 +11,7 @@ class Segment
 {
     //zmienne liczby ledów, jasności i opóźnienia
     unsigned short num, br , del;
-
+    bool clearing = false;
     //indeks aktualnie ustawiuanego pixela
     short loop_index = 0;
 
