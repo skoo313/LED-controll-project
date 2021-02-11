@@ -1,6 +1,6 @@
 #include <Adafruit_NeoPixel.h>
 
-#define PIN        5
+#define PIN        5 //5
 #define NUMPIXELS_MAX 80
 
 extern Adafruit_NeoPixel pixels;

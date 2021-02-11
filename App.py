@@ -22,7 +22,7 @@ import threading
 from netaddr import IPNetwork, IPAddress
 
 # definiuję adres:port modułu wifi z którym bede sie łączył
-HOST, PORT = "192.168.4.22", 8888  # 241   157
+HOST, PORT = "192.168.43.211", 8888  # 241   157
 #            "192.168.4.22 / 192.168.0.241
 
 
@@ -341,10 +341,7 @@ class ColorMain(tk.Frame):
 
         finalData = json.dumps(data)
 
-        if IPAddress("192.168.0.241") in IPNetwork("192.168.0.0/24"):
-            HOST = "192.168.0.241"
-        else:
-            HOST =  "192.168.4.22"
+
         print(HOST)
 
         # Create a socket (SOCK_STREAM means a TCP socket)
@@ -741,9 +738,9 @@ class SegmentColorPage(ColorMain):
         self.slen = StringVar(self.segmentOptFrame)
         self.slen.set("1")
         
-        ttk.Label(self.segmentOptFrame, style="Header.Label", text="Element length:",font=LARGE_FONT).grid(row=1, column=0, pady=10)
+        ttk.Label(self.segmentOptFrame, style="Header.Label", text="Element length:",font=LARGE_FONT).grid(row=1, column=0, columnspan=2, pady=10)
         self.el_NUM = Spinbox(self.segmentOptFrame, from_=1, to=80, justify=CENTER, command=lambda: self.elementSizeChange(), font=('Arial', 15, 'bold'), foreground='#A8A8A8', background="#353535", textvariable=self.slen)
-        self.el_NUM.grid(row=1, column=1, pady=10)
+        self.el_NUM.grid(row=1, column=2, pady=10)
         #-------------------------
         # linie czasowe
         self.timelines = [
@@ -754,25 +751,25 @@ class SegmentColorPage(ColorMain):
 
         self.timeLineChooser= OptionMenu(self.segmentOptFrame, self.timeLineVar, *self.timelines, command=self.addToTimeLine)
         self.timeLineChooser.config(font=('Arial', 10), foreground='#A8A8A8',background="#353535")
-        self.timeLineChooser.grid(row=2, column=1, sticky="nesw", pady=10)
-        ttk.Button(self.segmentOptFrame, style='TButton', text="Add time line", command=lambda: self.addTimeline()).grid(row=2, column=0)
+        self.timeLineChooser.grid(row=2, column=2, sticky="nesw", pady=10)
+        ttk.Button(self.segmentOptFrame, style='TButton', text="Add time line", command=lambda: self.addTimeline()).grid(row=2, column=0,columnspan=2)
         
-        ttk.Label(self.segmentOptFrame, style="Header.Label", text="Delay [s]:", font=LARGE_FONT).grid(row=3, column=0, padx=10, pady=1)
+        ttk.Label(self.segmentOptFrame, style="Header.Label", text="Delay [s]:", font=LARGE_FONT).grid(row=3, column=0,columnspan=2, padx=10, pady=1)
         self.delNum = StringVar(self.segmentOptFrame)
         self.delNum.set("0.00")
         self.delayNum = Spinbox(self.segmentOptFrame,command=lambda: self.delayChange(),textvariable=self.delNum, foreground='#A8A8A8', background="#353535", font=('Arial', 15), from_=0, to=1, format="%.2f",increment=0.01, justify=CENTER)
-        self.delayNum .grid(row=3, column=1, sticky="nwes", pady=10)
+        self.delayNum .grid(row=3, column=2, sticky="nwes", pady=10)
         #-------------------------
 
-        ttk.Label(self.segmentOptFrame, style="Header.Label", text="Wait:",font=LARGE_FONT).grid(row=4, column=0, pady=1)
+        ttk.Label(self.segmentOptFrame, style="Header.Label", text="Wait:",font=LARGE_FONT).grid(row=4, column=0,columnspan=2, pady=1)
         self.delStart = StringVar(self.segmentOptFrame)
         self.delStart.set("0.00")
         self.delayStart = Spinbox(self.segmentOptFrame, foreground='#A8A8A8', background="#353535", font=('Arial', 15), from_=0, to=1, format="%.2f", textvariable=self.delStart,increment=0.01, justify=CENTER)
-        self.delayStart.grid(row=4, column=1, pady=1)
+        self.delayStart.grid(row=4, column=2, pady=1)
         #-------------------------
         
         self.reverseVar = IntVar(value=0)
-        tk.Checkbutton(self.segmentOptFrame, command=lambda: self.setReverse() ,activebackground='red', foreground='red',background="#353535", font=('Arial', 15), text="Reverse", variable=self.reverseVar).grid(row=5, column=0,columnspan=2, sticky="news", padx=10, pady=10)
+        tk.Checkbutton(self.segmentOptFrame, command=lambda: self.setReverse() ,activebackground='red', foreground='red',background="#353535", font=('Arial', 15), text="Reverse", variable=self.reverseVar).grid(row=5, column=0,columnspan=3, sticky="news", padx=10, pady=10)
 
         self.colorTmp.trace_add('write', lambda name, index, mode, c1=col1, c2=col2: self.changeColorCallback(c1, c2, self.active_index))
 
@@ -795,7 +792,7 @@ class SegmentColorPage(ColorMain):
         self.timelines.append("        "+str(num)+"      ")
         self.timeLineChooser= OptionMenu(self.segmentOptFrame, self.timeLineVar, *self.timelines, command=self.addToTimeLine)
         self.timeLineChooser.config(font=('Arial', 10), foreground='#A8A8A8',background="#353535")
-        self.timeLineChooser.grid(row=2, column=1, sticky="nesw", pady=10)
+        self.timeLineChooser.grid(row=2, column=2, sticky="nesw", pady=10)
         self.timelinesMembers.append([])
         self.timelinedelay.append(0.0)
         print(self.timelinesMembers)
@@ -1030,7 +1027,8 @@ class OtherOptPage(ColorMain):
         self.rowconfigure(1, weight=1)
         self.rowconfigure(2, weight=1)
         self.rowconfigure(3, weight=1)
-        self.rowconfigure(4, weight=4)
+        self.rowconfigure(4, weight=1)
+
         self.main_controllFrame = Frame(self, bg=def_color2)
         self.main_controllFrame.grid(column=0, columnspan=4, row=0, sticky="nsew")
 
@@ -1049,13 +1047,16 @@ class OtherOptPage(ColorMain):
         button2.grid(row=0, column=1, sticky='nswe', pady=10)
 
         configWifi = ttk.Button(self, style='TButton',text="Configure WiFi", command=lambda: self.WiFiSettings())
-        configWifi.grid(row=1, column=0,columnspan=4, sticky='nswe', padx=10, pady=20)
+        configWifi.grid(row=1, column=0,columnspan=4, sticky='nswe', padx=50, pady=20)
 
         configTimer = ttk.Button(self, style='TButton',text="Configure Timer", command=lambda: self.TimerSettings())
-        configTimer.grid(row=2, column=0,columnspan=4, sticky='nswe', padx=10, pady=20)
+        configTimer.grid(row=2, column=0,columnspan=4, sticky='nswe', padx=50, pady=20)
         
         configSaved = ttk.Button(self, style='TButton',text="Configure Saved", command=lambda: self.SavedOptionsSettings(controller))
-        configSaved.grid(row=3, column=0,columnspan=4, sticky='nswe', padx=10, pady=20)
+        configSaved.grid(row=3, column=0,columnspan=4, sticky='nswe', padx=50, pady=20)
+        
+        configSaved = ttk.Button(self, style='TButton',text="Configure Screen", command=lambda: self.ScreenOptionsSettings())
+        configSaved.grid(row=4, column=0,columnspan=4, sticky='nswe', padx=50, pady=20)
 
         self.loaded=[]
         self.timerLoaded=[]
@@ -1395,7 +1396,69 @@ class OtherOptPage(ColorMain):
 
         backButton = ttk.Button(popup, text="Back",command=lambda: popup.destroy())
         backButton.grid(row=5, column=2, sticky='we',padx=10, pady=10)
+    
+    def ScreenOptionsSettings(self):
+        def send(a,b,c):
+            print(a)
+            print(b)
+            print(c)
+
+        popup = Toplevel()
+        popup.grab_set()
+        popup.title('Screen Settings') 
+        popup["bg"] = def_color
+        popup.geometry("600x600")
+
+        popup.columnconfigure(0,weight=1)
+        popup.columnconfigure(1,weight=1)
+        popup.rowconfigure(0,weight=1)
+        popup.rowconfigure(1,weight=1)
+        popup.rowconfigure(2,weight=1)
+        popup.rowconfigure(3,weight=1)
+        popup.rowconfigure(4,weight=1)
+        popup.rowconfigure(5,weight=1)
         
+
+
+        ttk.Label(popup, style="Header.Label", text="Turn off after:",font=LARGE_FONT).grid(row=0, column=0, pady=1)
+        # wybór solid/gradient 
+        OPTIONS = [
+            "               Always OFF              ",
+            "               Always ON               ",
+            "               10 sec                  ",
+            "               30 sec                  ",
+            "               1 min                   ",
+            "               2 min                   ",
+
+        ]  # etc
+
+        self.colorMode = StringVar(popup)
+        self.colorMode.set(OPTIONS[3])  # default value
+
+        self.colorModeChooser = OptionMenu(popup, self.colorMode, *OPTIONS)
+        self.colorModeChooser.config(font=('Arial', 10), foreground='#A8A8A8',background="#353535")
+        self.colorModeChooser.grid(row=0, column=1, sticky="nesw", padx=10, pady=10)
+
+
+        ttk.Label(popup, style="Header.Label", text="Messages to show:",font=LARGE_FONT).grid(row=1, column=0,columnspan=2, pady=1)
+        
+        opt_configuration = tk.BooleanVar(value=True)
+
+
+        opt_newClient = tk.BooleanVar(value=True)
+        opt_errors = tk.BooleanVar(value=False)
+        
+
+        tk.Checkbutton(popup,activebackground='red', foreground='red',background="#353535", font=('Arial', 15), text="Configuration messages", 
+            variable=opt_configuration).grid(row=2, column=0,columnspan=2, sticky="news", padx=10, pady=10)
+        tk.Checkbutton(popup,activebackground='red', foreground='red',background="#353535", font=('Arial', 15), text="New connection messages", 
+            variable=opt_newClient).grid(row=3, column=0,columnspan=2, sticky="news", padx=10, pady=10)
+        tk.Checkbutton(popup,activebackground='red', foreground='red',background="#353535", font=('Arial', 15), text="Error messages", 
+            variable=opt_errors).grid(row=4, column=0,columnspan=2, sticky="news", padx=10, pady=10)
+        
+        
+        okButton = ttk.Button(popup, text="Apply", command=lambda: sequence(send(opt_configuration.get(),opt_newClient.get(),opt_errors.get()),popup.destroy())) 
+        okButton.grid(row=5, column=0,columnspan=2, sticky='ns', pady=10, padx=10)
 
 app = Main(root)
 root.geometry("1500x720")

@@ -24,7 +24,7 @@ LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, lcdColumns, lcdRows); // Change 
 
 const int buttonPin1 = 16;     // D0
 const int buttonPin2 = 15;     // D8
-const int buttonPin3 = 4;
+const int buttonPin3 = 4;  // zmien to deklu na 4 jak bedzie sd pod tx
 // variables will change:
 int buttonState1 = 0;         // variable for reading the pushbutton status
 int buttonState2 = 0;
@@ -37,6 +37,8 @@ void MainManager::configureLCD()
   lcd.begin();
   // turn on LCD backlight
   lcd.backlight();
+
+  startMillis = millis();
 }
 void MainManager::LCD(String massageR1, String massageR2)
 {
@@ -52,6 +54,9 @@ void MainManager::LCD(String massageR1, String massageR2)
   lcd.setCursor(0, 1);
   // print message
   lcd.print(massageR2);
+
+
+
 }
 void MainManager::configure()
 {
@@ -86,6 +91,7 @@ void MainManager::configure()
   pinMode(buttonPin1, INPUT);
   pinMode(buttonPin2, INPUT);
   pinMode(buttonPin3, INPUT);
+
 }
 //Funkcja przyjmująca dane od połączonego klienta i przekazująca ją do funkcji odczytującej dane
 void  MainManager::loadData()
@@ -158,13 +164,14 @@ bool  MainManager::readData(bool newData)
       ssid = jObj["ssid"].as<String>();
       password = jObj["password"].as<String>();
 
-      if (newData)
-        saveToFile("WiFi_Data.txt");
+
+      saveToFile("WiFi_Data.txt");
 
       Serial.println("readDataFun()");
       Serial.println(ssid);
       Serial.println(password);
 
+      disconnectClient();
       return 1;
 
     }
@@ -298,12 +305,14 @@ void  MainManager::readFile(String filename) //funkcja odczytujaca dane z pliku 
   Serial.println(filename);
   //Read File data - check if in file is last used configuration
   myFile = SD.open(filename);
+
   if (myFile)
   {
 
-    Serial.println(filename);
+    //Serial.println(filename);
 
     // read from the file until there's nothing else in it:
+
     while (myFile.available()) {
       req = myFile.readStringUntil('\n');
     }
@@ -402,6 +411,7 @@ void  MainManager::connectToWifi() //funkcja odpowiedzialna za polaczenie z wifi
     newClient.stop();
     // Wait for connection
     Serial.println("Connecting to Wifi");
+    LCD("Connecting", "to Wifi");
     while (WiFi.status() != WL_CONNECTED) {
       delay(500);
       Serial.print(".");
@@ -420,36 +430,152 @@ void  MainManager::connectToWifi() //funkcja odpowiedzialna za polaczenie z wifi
     Serial.println(port);
   }
 }
-void MainManager::mloop()//jeśli klient nie jest połączony - sprawdza czy jest task
+void MainManager::LCD_turnOff()
 {
+  currentMillis = millis();
+  if (currentMillis - startMillis >= del)
+  {
+    //"reset" czasu
+    startMillis = currentMillis;
+    lcd.noBacklight();
+  }
+}
+
+void MainManager::buttonActions()
+{
+  bool exitF=false;
+static String options[] = {"Saved actions", "Choose RGB", "Exit"};
   buttonState1 = digitalRead(buttonPin1);
   buttonState2 = digitalRead(buttonPin2);
   buttonState3 = digitalRead(buttonPin3);
-  // check if the pushbutton is pressed. If it is, the buttonState is HIGH:
-  if (buttonState1 == HIGH)
+
+  //check if the pushbutton is pressed. If it is, the buttonState is HIGH:
+  if (buttonState1 == HIGH || buttonState2 == HIGH || buttonState3 == HIGH )
   {
-    // turn LED on:
-    Serial.println("1");
-    lcd.setCursor(0, 0);
-    // print message
-    lcd.print("    1");
+    int index = 0;
+
+    lcd.backlight();
+    LCD("MAIN MENU", options[index]);
+    delay(500);
+
+    while (true)
+    {
+      if(exitF)
+        break;
+        
+      buttonState1 = digitalRead(buttonPin1);
+      buttonState2 = digitalRead(buttonPin2);
+      buttonState3 = digitalRead(buttonPin3);
+
+      if (buttonState1 == HIGH)
+      {
+        delay(200);
+        index++;
+        if (index > 2)
+          index = 0;
+        LCD("MAIN MENU", options[index]);
+        Serial.println(options[index]);
+      }
+      else if (buttonState2 == HIGH)
+      {
+        delay(200);
+        index--;
+        if (index < 0)
+          index = 2;
+        LCD("MAIN MENU", options[index]);
+        Serial.println(options[index]);
+      }
+      else if (buttonState3 == HIGH)
+      {
+        LCD("Choosen opt", options[index]);
+        delay(200);
+        Serial.print("3: ");
+        Serial.println(options[index]);
+        
+        if (index == 0)
+        {
+          std::vector<String> files;
+
+          File dir = SD.open("/SavedOptions/");
+
+          while (true)
+          {
+            File entry =  dir.openNextFile();
+
+            // no more files
+            if (! entry)
+              break;
+
+            files.push_back(entry.name());
+
+            entry.close();
+          }
+          int indexF = 0;
+          Serial.println(files[indexF]);
+          Serial.println(files.size());
+          LCD("Saved file:", files[indexF]);
+          delay(500);
+          
+          while (true)
+          {
+            if(exitF)
+              break;
+
+            buttonState1 = digitalRead(buttonPin1);
+            buttonState2 = digitalRead(buttonPin2);
+            buttonState3 = digitalRead(buttonPin3);
+
+            if (buttonState1 == HIGH)
+            {
+              indexF++;
+              if (indexF > files.size()-1)
+                indexF = 0;
+
+              LCD("Saved file:", files[indexF]);
+              Serial.println(files[indexF]);
+            }
+            else if (buttonState2 == HIGH)
+            {
+              indexF--;
+              if (indexF < 0)
+                indexF = files.size()-1;
+              LCD("Saved file:", files[indexF]);
+              Serial.println(files[indexF]);
+            }
+            else if (buttonState3 == HIGH)
+            {
+              Serial.println("XXXXXXXXXXXXXXXX");
+              readFile("/SavedOptions/"+files[indexF]);
+              Serial.println("XXXXXXXXXXXXXXXX");
+              exitF=true;
+            }
+            delay(200);
+          }
+        }
+
+      }
+      if (index == 2)
+      {
+
+        LCD("EXIT", "EXIT");
+        delay(500);
+        exitF=true;
+
+      }
+    }
+    delay(200);
+
   }
-  if (buttonState2 == HIGH)
-  {
-    // turn LED on:
-    Serial.println("2");
-    lcd.setCursor(0, 0);
-    // print message
-    lcd.print("    2");
-  }
-  if (buttonState3 == HIGH)
-  {
-    // turn LED on:
-    Serial.println("3");
-    lcd.setCursor(0, 0);
-    // print message
-    lcd.print("    3");
-  }
+}
+
+
+
+void MainManager::mloop()
+{
+  buttonActions();
+
+  LCD_turnOff();
+
 
   if (!newClient.connected())
     checkForTask();
@@ -505,6 +631,4 @@ void MainManager::mloop()//jeśli klient nie jest połączony - sprawdza czy jes
 
     }
   }
-
-
 }

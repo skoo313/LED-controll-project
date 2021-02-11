@@ -21,6 +21,9 @@ class MainManager
     String ssid = "";
     String password = "";
 
+    unsigned long currentMillis, startMillis;
+    unsigned short del=15000;
+
     //kontener dla wszystkich segmentów
     std::vector <Segment> allData;
 
@@ -28,8 +31,6 @@ class MainManager
     String req = "";
 
     File myFile ;
-
-
 
     struct timer
     {
@@ -74,4 +75,6 @@ class MainManager
     void configureLCD();
 
     void LCD(String massageR1, String massageR2 = "");
+    void LCD_turnOff();
+    void buttonActions();
 };

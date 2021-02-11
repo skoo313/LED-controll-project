@@ -8,14 +8,18 @@ void setup()
   manager.configureLCD();
 
   manager.configure();
+  manager.LCD("Configuration", "DONE");
   
   manager.readFile("/WiFi_Data.txt");
   manager.readFile("lastRequest.txt");
   manager.readFile("plannedActions.txt");
-
+  
+  manager.LCD("Files load", "DONE");
 
   manager.connectToWifi();
   Serial.println("Kończę setup");
+
+  manager.LCD("SETUP()", "DONE");
 }
 
 void loop()

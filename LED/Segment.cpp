@@ -30,8 +30,6 @@ void Segment::addPixel(int red, int green, int blue, int i) //funkcja dodająca 
 
 void Segment::ledMain()  //funkcja obsługująca
 {
-  
-
   if (!clearing)
   {
     if (br) //ustawia jasnosc
@@ -53,8 +51,6 @@ void Segment::ledMain()  //funkcja obsługująca
         if (del == 0)
           pixels.show();
       }
-
-
     }
   }
   else
